@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 
 import { theme } from '@/theme/theme';
-import { api, getStoredUser, getStoredToken } from '@/lib/api';
+import { api, getStoredUser, getStoredToken, isCurrentlyImpersonating } from '@/lib/api';
 import {
   User,
   Teacher,
@@ -122,6 +122,7 @@ export default function Home() {
 
   // Authentication & RBAC State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Navigation: 0: Available Sessions, 1: Role Dashboard, 2: Teachers
@@ -175,6 +176,7 @@ export default function Home() {
     setSelectedDate(new Date().toISOString().split('T')[0]);
     const stored = getStoredUser();
     const token = getStoredToken();
+    setIsImpersonating(isCurrentlyImpersonating());
     if (stored && token) {
       setCurrentUser(stored);
       if (stored.role === 'STUDENT' || stored.role === 'ADMIN' || stored.role === 'SUPER_ADMIN') {
@@ -335,6 +337,7 @@ export default function Home() {
     lastFetchedTeacherIdRef.current = '';
     lastFetchedStudentIdRef.current = '';
     setCurrentUser(user);
+    setIsImpersonating(isCurrentlyImpersonating());
     if (user.role === 'STUDENT' || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
       setActiveUserId(user._id);
     } else if (user.role === 'TEACHER' && user.teacherId) {
@@ -352,11 +355,28 @@ export default function Home() {
     showNotification('success', `Welcome, ${user.fullName}! Logged in as ${user.role}.`);
   };
 
+  const handleExitImpersonation = () => {
+    const restored = api.exitImpersonation();
+    if (restored) {
+      handleAuthSuccess(restored.user);
+      setIsImpersonating(false);
+      showNotification('success', `Stealth session closed. Returned to ${restored.user.fullName} (Super Admin).`);
+    } else {
+      handleLogout();
+    }
+  };
+
   const handleLogout = () => {
+    // If inside a stealth impersonated account, exiting returns to Super Admin account
+    if (isCurrentlyImpersonating()) {
+      handleExitImpersonation();
+      return;
+    }
     lastFetchedTeacherIdRef.current = '';
     lastFetchedStudentIdRef.current = '';
     api.logout(); // Removes token and user from localStorage
     setCurrentUser(null);
+    setIsImpersonating(false);
     setActiveUserId('');
     setUserSessions(null);
     setTeacherSessions(null);
@@ -551,25 +571,79 @@ export default function Home() {
       <CssBaseline />
       <AntiScreenshotProtection currentUser={currentUser}>
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+          {/* Stealth Impersonation Persistent Return Bar */}
+          {isImpersonating && (
+            <Box
+              sx={{
+                bgcolor: '#0f172a',
+                color: '#ffffff',
+                py: 1,
+                px: { xs: 2, sm: 3 },
+                borderBottom: '2px solid #f59e0b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 1.5,
+                position: 'sticky',
+                top: 0,
+                zIndex: 1200,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap' }}>
+                <Chip
+                  icon={<SecurityIcon sx={{ fontSize: '13px !important', color: '#000 !important' }} />}
+                  label="STEALTH DIRECT LOGIN ACTIVE"
+                  size="small"
+                  sx={{ bgcolor: '#f59e0b', color: '#000', fontWeight: 800, fontSize: '0.68rem', height: 22 }}
+                />
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#f8fafc', fontSize: '0.82rem' }}>
+                  You are viewing the platform as <strong>{currentUser.fullName}</strong> ({currentUser.role} • {currentUser.organization || 'General'}). No user activity is recorded.
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleExitImpersonation}
+                sx={{
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  py: 0.3,
+                  px: 1.8,
+                  fontSize: '0.75rem',
+                  borderRadius: 1.5,
+                  bgcolor: '#f59e0b',
+                  color: '#0f172a',
+                  '&:hover': { bgcolor: '#d97706', color: '#ffffff' },
+                }}
+              >
+                🔙 Exit Stealth & Return to Super Admin
+              </Button>
+            </Box>
+          )}
+
           {/* Top Navbar with RBAC */}
-        <MuiNavbar
-          users={users}
-          currentUser={currentUser}
-          activeUserId={activeUserId}
-          onUserChange={(id) => setActiveUserId(id)}
-          onOpenCreateSession={() => {
-            if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
-              setPreselectedTeacherId(currentUser.teacherId);
-            } else {
-              setPreselectedTeacherId('');
-            }
-            setIsCreateSessionOpen(true);
-          }}
-          onOpenCreateUser={() => setIsCreateUserOpen(true)}
-          onOpenInspector={() => setIsInspectorOpen(true)}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
-          onLogout={handleLogout}
-        />
+          <MuiNavbar
+            users={users}
+            currentUser={currentUser}
+            activeUserId={activeUserId}
+            onUserChange={(id) => setActiveUserId(id)}
+            onOpenCreateSession={() => {
+              if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
+                setPreselectedTeacherId(currentUser.teacherId);
+              } else {
+                setPreselectedTeacherId('');
+              }
+              setIsCreateSessionOpen(true);
+            }}
+            onOpenCreateUser={() => setIsCreateUserOpen(true)}
+            onOpenInspector={() => setIsInspectorOpen(true)}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            onLogout={handleLogout}
+            isImpersonating={isImpersonating}
+            onExitImpersonation={handleExitImpersonation}
+          />
 
         {/* 72-Hour Student Trial Countdown Banner */}
         {currentUser?.isTrial && <TrialBanner currentUser={currentUser} />}

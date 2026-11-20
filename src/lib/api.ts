@@ -12,6 +12,8 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const TOKEN_STORAGE_KEY = 'mentora_access_token';
 const USER_STORAGE_KEY = 'mentora_current_user';
+const IMPERSONATOR_TOKEN_KEY = 'mentora_impersonator_token';
+const IMPERSONATOR_USER_KEY = 'mentora_impersonator_user';
 
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -39,6 +41,39 @@ export function clearStoredAuth() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_STORAGE_KEY);
   localStorage.removeItem(USER_STORAGE_KEY);
+}
+
+export function getStoredImpersonatorToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(IMPERSONATOR_TOKEN_KEY);
+}
+
+export function getStoredImpersonatorUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(IMPERSONATOR_USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredImpersonator(token: string, user: User) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(IMPERSONATOR_TOKEN_KEY, token);
+  localStorage.setItem(IMPERSONATOR_USER_KEY, JSON.stringify(user));
+}
+
+export function clearStoredImpersonator() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(IMPERSONATOR_TOKEN_KEY);
+  localStorage.removeItem(IMPERSONATOR_USER_KEY);
+}
+
+export function isCurrentlyImpersonating(): boolean {
+  if (typeof window === 'undefined') return false;
+  return Boolean(localStorage.getItem(IMPERSONATOR_TOKEN_KEY));
 }
 
 function getAuthHeaders(): HeadersInit {
@@ -109,11 +144,18 @@ export const api = {
       // Ignore network errors on logout
     } finally {
       clearStoredAuth();
+      clearStoredImpersonator();
     }
   },
 
   // Super Admin: Stealth Impersonation Direct Login (activity not recorded)
   async impersonateLogin(payload: { targetUserId?: string; email?: string; password?: string }): Promise<AuthResponse> {
+    const currentToken = getStoredToken();
+    const currentUser = getStoredUser();
+    // If not already impersonating, remember the Super Admin's session
+    if (currentToken && currentUser && currentUser.role === 'SUPER_ADMIN' && !isCurrentlyImpersonating()) {
+      setStoredImpersonator(currentToken, currentUser);
+    }
     const res = await fetch(`${API_BASE_URL}/auth/impersonate-login`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -122,6 +164,18 @@ export const api = {
     const data = await handleResponse<AuthResponse>(res);
     setStoredAuth(data.accessToken, data.user);
     return data;
+  },
+
+  // Exit Stealth Impersonation & restore original Super Admin account
+  exitImpersonation(): { token: string; user: User } | null {
+    const origToken = getStoredImpersonatorToken();
+    const origUser = getStoredImpersonatorUser();
+    if (origToken && origUser) {
+      setStoredAuth(origToken, origUser);
+      clearStoredImpersonator();
+      return { token: origToken, user: origUser };
+    }
+    return null;
   },
 
   // Super Admin: Activity Logs & Audit Module

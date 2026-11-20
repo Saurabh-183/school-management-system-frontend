@@ -7,9 +7,6 @@ import {
   Typography,
   Box,
   Button,
-  FormControl,
-  Select,
-  MenuItem,
   Chip,
   IconButton,
   Tooltip,
@@ -25,7 +22,6 @@ import {
   SupervisorAccount as AdminIcon,
   Security as SecurityIcon,
   Person as TeacherIcon,
-  SwapHoriz as SwitchIcon,
 } from '@mui/icons-material';
 import { User, UserRole } from '@/lib/types';
 
@@ -39,6 +35,8 @@ interface MuiNavbarProps {
   onOpenInspector: () => void;
   onOpenAuthModal: () => void;
   onLogout: () => void;
+  isImpersonating?: boolean;
+  onExitImpersonation?: () => void;
 }
 
 export function MuiNavbar({
@@ -51,6 +49,8 @@ export function MuiNavbar({
   onOpenInspector,
   onOpenAuthModal,
   onLogout,
+  isImpersonating,
+  onExitImpersonation,
 }: MuiNavbarProps) {
   const getRoleColor = (role?: UserRole): 'primary' | 'secondary' | 'warning' | 'error' | 'default' => {
     switch (role) {
@@ -165,28 +165,29 @@ export function MuiNavbar({
                 }}
               />
 
-              {/* If Admin / Super Admin, allow switching active student context */}
-              {(currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') && users.length > 0 && (
-                <FormControl size="small" sx={{ minWidth: 140, ml: 0.5, display: { xs: 'none', lg: 'inline-flex' } }}>
-                  <Select
-                    value={activeUserId}
-                    onChange={(e) => onUserChange(e.target.value)}
-                    displayEmpty
-                    sx={{
-                      height: 26,
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      bgcolor: '#ffffff',
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-                    }}
-                  >
-                    {users.map((u) => (
-                      <MenuItem key={u._id} value={u._id} sx={{ fontSize: '0.75rem' }}>
-                        Act as: {u.fullName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              {/* If in Stealth Impersonation mode, allow immediate return to Super Admin */}
+              {isImpersonating && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="warning"
+                  startIcon={<SecurityIcon sx={{ fontSize: '0.85rem' }} />}
+                  onClick={onExitImpersonation}
+                  sx={{
+                    fontSize: '0.72rem',
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    py: 0.2,
+                    px: 1.2,
+                    height: 26,
+                    borderRadius: 1.5,
+                    bgcolor: '#d97706',
+                    color: '#ffffff',
+                    '&:hover': { bgcolor: '#b45309' },
+                  }}
+                >
+                  Exit Stealth (Return to SA)
+                </Button>
               )}
 
               {/* Logout Button */}
