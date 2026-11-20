@@ -186,6 +186,16 @@ export const api = {
     return handleResponse<Teacher[]>(res);
   },
 
+  // Admin Only: Create Teacher
+  async createTeacher(data: { fullName: string; email: string; specialization: string; experience: number }): Promise<Teacher> {
+    const res = await fetch(`${API_BASE_URL}/teachers`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Teacher>(res);
+  },
+
   // Role Dashboard: Teacher's own schedule & sessions
   async getTeacherSessions(teacherId: string): Promise<import('./types').TeacherSessionsResponse> {
     const res = await fetch(`${API_BASE_URL}/teachers/${teacherId}/sessions`, {

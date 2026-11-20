@@ -76,6 +76,7 @@ export function MuiNavbar({
   };
 
   const canSchedule = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';
+  const canRegisterStudent = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';
 
   return (
     <AppBar
@@ -238,32 +239,31 @@ export function MuiNavbar({
             </Button>
           )}
 
-          {/* Schedule Slot (Teacher / Admin) */}
-          <Tooltip title={canSchedule ? 'Create Teacher Availability Slot' : 'Login as Teacher or Admin to schedule slots'}>
-            <span>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={onOpenCreateSession}
-                disabled={!canSchedule}
-                sx={{ fontWeight: 600 }}
-              >
-                Schedule Slot
-              </Button>
-            </span>
-          </Tooltip>
+          {/* Schedule Slot (Teacher / Admin Only) */}
+          {canSchedule && (
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<AddIcon />}
+              onClick={onOpenCreateSession}
+              sx={{ fontWeight: 600 }}
+            >
+              Schedule Slot
+            </Button>
+          )}
 
-          {/* Quick Register Student Modal */}
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<PersonAddIcon />}
-            onClick={onOpenCreateUser}
-            sx={{ display: { xs: 'none', lg: 'inline-flex' }, fontWeight: 500 }}
-          >
-            Register Student
-          </Button>
+          {/* Quick Register Student Modal (Teacher / Admin Only) */}
+          {canRegisterStudent && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<PersonAddIcon />}
+              onClick={onOpenCreateUser}
+              sx={{ display: { xs: 'none', lg: 'inline-flex' }, fontWeight: 500 }}
+            >
+              Register Student
+            </Button>
+          )}
 
           {/* API Inspector */}
           <Tooltip title="View MongoDB Aggregation Pipelines & REST Specs">

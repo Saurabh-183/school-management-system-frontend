@@ -337,12 +337,16 @@ export default function Home() {
     }
   };
 
-  // Handler: Create User (API 1)
+  // Handler: Create User (API 1 - Teacher & Admin only)
   const handleCreateUser = async (data: {
     fullName: string;
     email: string;
     phone: string;
   }): Promise<User> => {
+    if (currentUser?.role === 'STUDENT') {
+      showNotification('error', 'RBAC Restriction: Students cannot register new students. Only Teachers and Admins have access.');
+      throw new Error('Access denied: Students cannot register new students.');
+    }
     try {
       const newUser = await api.createUser(data);
       showNotification('success', `Student '${newUser.fullName}' registered successfully!`);
@@ -586,6 +590,15 @@ export default function Home() {
               onScheduleForTeacher={(teacherId) => {
                 setPreselectedTeacherId(teacherId);
                 setIsCreateSessionOpen(true);
+              }}
+              onTeacherCreated={async () => {
+                try {
+                  const refreshed = await api.getTeachers();
+                  setTeachers(refreshed);
+                  showNotification('success', 'New teacher profile registered successfully!');
+                } catch (err: any) {
+                  showNotification('error', err.message || 'Failed to refresh teacher list');
+                }
               }}
             />
           )}
