@@ -104,14 +104,39 @@ export function getEmbeddableVideoUrl(url: string): { embedUrl: string; isDirect
 
 /**
  * Intelligent helper to convert document URLs into embeddable in-app readers.
- * Uses Google Docs Viewer for external web PDFs to bypass X-Frame-Options (w3.org refusal).
+ * Uses native local static PDF streaming for /docs/* and Google Docs Viewer for external web PDFs.
+ * Automatically replaces dummy test links with genuine course academic documents.
  */
-export function getEmbeddableDocUrl(url: string): { embedUrl: string; isBlobOrData: boolean } {
+export function getEmbeddableDocUrl(url: string, title?: string): { embedUrl: string; isBlobOrData: boolean } {
   if (!url) return { embedUrl: '', isBlobOrData: false };
-  const trimmed = url.trim();
+  let trimmed = url.trim();
 
+  // If the URL is a test dummy placeholder from initial seeds, automatically reroute to authentic course PDF
+  if (trimmed.includes('dummy.pdf') || trimmed.includes('w3.org') || trimmed.includes('dummy')) {
+    const tLower = (title || '').toLowerCase();
+    if (tLower.includes('mongo') || tLower.includes('database')) {
+      trimmed = '/docs/MongoDB_Query_Optimization_Field_Guide.pdf';
+    } else if (tLower.includes('system') || tLower.includes('architecture') || tLower.includes('node') || tLower.includes('distributed')) {
+      trimmed = '/docs/FullStack_NodeJS_Architecture_Handbook.pdf';
+    } else {
+      trimmed = '/docs/Dynamic_Programming_Formula_Cheatsheet.pdf';
+    }
+  }
+
+  // Blob URLs from client-side drag-and-drop
   if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
     return { embedUrl: trimmed, isBlobOrData: true };
+  }
+
+  // Local static docs served directly by Next.js from public/docs
+  if (trimmed.startsWith('/docs/') || trimmed.startsWith('./docs/')) {
+    return { embedUrl: trimmed, isBlobOrData: false };
+  }
+
+  // If same-origin Vercel deployment URL
+  if (trimmed.includes('school-management-system-frontend-flame.vercel.app/docs/')) {
+    const pathPart = trimmed.substring(trimmed.indexOf('/docs/'));
+    return { embedUrl: pathPart, isBlobOrData: false };
   }
 
   // Google Drive document link
@@ -370,7 +395,7 @@ export function MuiLearningResourcesDialog({
   };
 
   const activeVideoInfo = selectedVideo ? getEmbeddableVideoUrl(selectedVideo.videoUrl) : null;
-  const activeDocInfo = selectedDoc ? getEmbeddableDocUrl(selectedDoc.fileUrl) : null;
+  const activeDocInfo = selectedDoc ? getEmbeddableDocUrl(selectedDoc.fileUrl, selectedDoc.title) : null;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -724,7 +749,14 @@ export function MuiLearningResourcesDialog({
                           size="small"
                           variant="outlined"
                           startIcon={<OpenIcon />}
-                          onClick={() => window.open(selectedDoc.fileUrl, '_blank')}
+                          onClick={() => {
+                            const targetUrl = activeDocInfo?.embedUrl.startsWith('/docs/')
+                              ? activeDocInfo.embedUrl
+                              : selectedDoc.fileUrl.includes('dummy') || selectedDoc.fileUrl.includes('w3.org')
+                                ? '/docs/Dynamic_Programming_Formula_Cheatsheet.pdf'
+                                : selectedDoc.fileUrl;
+                            window.open(targetUrl, '_blank');
+                          }}
                           sx={{ textTransform: 'none', fontSize: '0.75rem', fontWeight: 600 }}
                         >
                           Open Direct
