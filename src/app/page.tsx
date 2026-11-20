@@ -52,6 +52,70 @@ import { ApiInspectorModal } from '@/components/inspector/ApiInspectorModal';
 import { AntiScreenshotProtection } from '@/components/security/AntiScreenshotProtection';
 import { MuiStudentStudyChatbot } from '@/components/chatbot/MuiStudentStudyChatbot';
 
+function TrialBanner({ currentUser }: { currentUser: User }) {
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number; isExpired: boolean }>({
+    hours: 72,
+    minutes: 0,
+    seconds: 0,
+    isExpired: false,
+  });
+
+  useEffect(() => {
+    if (!currentUser.isTrial || !currentUser.trialExpiresAt) return;
+
+    const calc = () => {
+      const diff = new Date(currentUser.trialExpiresAt!).getTime() - Date.now();
+      if (diff <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+      } else {
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft({ hours, minutes, seconds, isExpired: false });
+      }
+    };
+
+    calc();
+    const interval = setInterval(calc, 1000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
+  if (!currentUser.isTrial) return null;
+
+  return (
+    <Box
+      sx={{
+        bgcolor: timeLeft.isExpired ? '#fef2f2' : '#fffbeb',
+        borderBottom: `1px solid ${timeLeft.isExpired ? '#fecaca' : '#fde68a'}`,
+        py: 1,
+        px: 2,
+        textAlign: 'center',
+      }}
+    >
+      <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+        <Typography variant="body2" sx={{ fontWeight: 700, color: timeLeft.isExpired ? '#991b1b' : '#92400e' }}>
+          {timeLeft.isExpired ? '⚠️ 72-Hour Free Trial Expired' : '⏳ 72-Hour Student Evaluation Trial Active'}:
+        </Typography>
+        <Chip
+          label={
+            timeLeft.isExpired
+              ? 'Access Expired'
+              : `${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s remaining`
+          }
+          color={timeLeft.isExpired ? 'error' : 'warning'}
+          size="small"
+          sx={{ fontWeight: 800, fontFamily: 'monospace' }}
+        />
+        <Typography variant="caption" sx={{ color: timeLeft.isExpired ? '#b91c1c' : '#78350f', fontWeight: 500 }}>
+          {timeLeft.isExpired
+            ? 'Evaluation period ended. Account scheduled for archival. Contact your school administrator to unlock permanent enrollment.'
+            : 'You are on a temporary 72-hour student evaluation access. Contact administration to extend full access before expiry.'}
+        </Typography>
+      </Container>
+    </Box>
+  );
+}
+
 export default function Home() {
   // Client hydration check
   const [isHydrating, setIsHydrating] = useState<boolean>(true);
@@ -498,6 +562,9 @@ export default function Home() {
           onLogout={handleLogout}
         />
 
+        {/* 72-Hour Student Trial Countdown Banner */}
+        {currentUser?.isTrial && <TrialBanner currentUser={currentUser} />}
+
         {/* Tab Navigation */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
           <Container maxWidth="lg">
@@ -571,6 +638,7 @@ export default function Home() {
                   onRefreshAll={() => {
                     fetchAvailableSessions(selectedDate, page, rowsPerPage, searchQuery);
                   }}
+                  onAuthSuccess={handleAuthSuccess}
                 />
               ) : currentUser?.role === 'TEACHER' ? (
                 /* TEACHER DASHBOARD */

@@ -14,9 +14,6 @@ import {
   CircularProgress,
   IconButton,
   InputAdornment,
-  Chip,
-  Divider,
-  MenuItem,
   Container,
 } from '@mui/material';
 import {
@@ -24,155 +21,37 @@ import {
   VisibilityOff,
   School as SchoolIcon,
   LockOutlined as LockIcon,
-  Person as PersonIcon,
-  SupervisorAccount as AdminIcon,
-  Security as SecurityIcon,
-  Sync as SyncIcon,
-  HowToReg as RegisterIcon,
   Login as LoginIcon,
+  HourglassTop as TrialIcon,
   CheckCircle as CheckIcon,
-  Apartment as OrganizationIcon,
+  Security as SecurityIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
-import { User, UserRole } from '@/lib/types';
+import { User } from '@/lib/types';
 
 interface MuiAuthScreenProps {
   onAuthSuccess: (user: User) => void;
 }
 
-const DEMO_USERS = [
-  {
-    name: 'Saurabh Agnihotri (Super Admin)',
-    email: 'superadmin@gmail.com',
-    role: 'SUPER_ADMIN' as UserRole,
-    label: 'Super Admin',
-    icon: <SecurityIcon fontSize="small" />,
-    color: 'error' as const,
-    password: '#*Saurabh8737@',
-    desc: 'Ultimate governance: provision school admins, view all organizations, cross-tenant audit',
-  },
-  {
-    name: 'Prince Agnihotri (DPS Admin)',
-    email: 'prince.agnihotri@example.com',
-    role: 'ADMIN' as UserRole,
-    label: 'School Admin',
-    icon: <AdminIcon fontSize="small" />,
-    color: 'warning' as const,
-    password: 'Password@123',
-    desc: 'School Admin: Delhi Public School (DPS Campus) - manage teachers, classes & students',
-  },
-  {
-    name: 'Abhishek Singh',
-    email: 'abhishek.singh@example.com',
-    role: 'TEACHER' as UserRole,
-    label: 'Teacher',
-    icon: <PersonIcon fontSize="small" />,
-    color: 'secondary' as const,
-    password: 'Password@123',
-    desc: 'Schedule availability slots, manage student bookings, mark COMPLETED',
-  },
-  {
-    name: 'Manas Tiwari',
-    email: 'manas.tiwari@example.com',
-    role: 'TEACHER' as UserRole,
-    label: 'Teacher',
-    icon: <PersonIcon fontSize="small" />,
-    color: 'secondary' as const,
-    password: 'Password@123',
-    desc: 'Schedule availability slots, manage student bookings, mark COMPLETED',
-  },
-  {
-    name: 'Saurabh Agnihotri (Student)',
-    email: 'saurabh.agnihotri@example.com',
-    role: 'STUDENT' as UserRole,
-    label: 'Student',
-    icon: <SchoolIcon fontSize="small" />,
-    color: 'primary' as const,
-    password: 'Password@123',
-    desc: 'Browse available sessions, book slots, view learning schedule',
-  },
-  {
-    name: 'Anjali Verma',
-    email: 'anjali.verma@example.com',
-    role: 'STUDENT' as UserRole,
-    label: 'Student',
-    icon: <SchoolIcon fontSize="small" />,
-    color: 'primary' as const,
-    password: 'Password@123',
-    desc: 'Browse available sessions, book slots, view learning schedule',
-  },
-];
-
 export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
-  const [tabIndex, setTabIndex] = useState<number>(0); // 0: Login, 1: Register
+  const [tabIndex, setTabIndex] = useState<number>(0); // 0: Sign In, 1: Student Trial Register
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [seeding, setSeeding] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [seedSuccessMsg, setSeedSuccessMsg] = useState<string | null>(null);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('Password@123');
+  const [loginPassword, setLoginPassword] = useState('');
 
-  // Register form state
+  // Register form state (Student 72-Hour Trial)
   const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
-  const [regRole, setRegRole] = useState<'STUDENT' | 'TEACHER'>('STUDENT');
-  const [regOrganization, setRegOrganization] = useState('Delhi Public School (DPS Campus)');
-  const [regClassGrade, setRegClassGrade] = useState('Class 12-A');
-  const [regSpecialization, setRegSpecialization] = useState('Full Stack Web Development & Node.js');
-  const [regExperience, setRegExperience] = useState<number>(5);
-  const [regPassword, setRegPassword] = useState('Password@123');
-  const [regConfirmPassword, setRegConfirmPassword] = useState('Password@123');
-
-  // 1-Click Quick Demo Login
-  const handleQuickDemoSelect = async (demo: typeof DEMO_USERS[0]) => {
-    const password = (demo as any).password || 'Password@123';
-    setLoginEmail(demo.email);
-    setLoginPassword(password);
-    setErrorMsg(null);
-    setSeedSuccessMsg(null);
-    setTabIndex(0);
-
-    try {
-      setLoading(true);
-      const res = await api.login({
-        email: demo.email,
-        password: password,
-      });
-      onAuthSuccess(res.user);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Quick login failed. Database may need initialization.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 1-Click Cloud Database Seeder
-  const handleSeedData = async (autoLoginEmail?: string) => {
-    setSeeding(true);
-    setErrorMsg(null);
-    setSeedSuccessMsg(null);
-    try {
-      await api.seedDemoData();
-      setSeedSuccessMsg('Database seeded successfully in MongoDB Atlas! Demo accounts & sessions are ready.');
-      if (autoLoginEmail) {
-        const pass = autoLoginEmail === 'superadmin@gmail.com' ? '#*Saurabh8737@' : 'Password@123';
-        const res = await api.login({
-          email: autoLoginEmail,
-          password: pass,
-        });
-        onAuthSuccess(res.user);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Database seeding failed. Please check backend connection.');
-    } finally {
-      setSeeding(false);
-    }
-  };
+  const [regOrganization, setRegOrganization] = useState('');
+  const [regClassGrade, setRegClassGrade] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
   // Handle Standard Login
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -190,16 +69,23 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
       });
       onAuthSuccess(res.user);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please verify credentials.');
+      setErrorMsg(err.message || 'Authentication failed. Please verify your email and password.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle Registration (Creates User & Logs In)
+  // Handle Student 72-Hour Trial Registration
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regFullName.trim() || !regEmail.trim() || !regPhone.trim() || !regPassword) {
+    if (
+      !regFullName.trim() ||
+      !regEmail.trim() ||
+      !regPhone.trim() ||
+      !regOrganization.trim() ||
+      !regClassGrade.trim() ||
+      !regPassword
+    ) {
       setErrorMsg('Please complete all required fields.');
       return;
     }
@@ -220,15 +106,13 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
         email: regEmail.trim(),
         phone: regPhone.trim(),
         password: regPassword,
-        role: regRole,
+        role: 'STUDENT',
         organization: regOrganization.trim(),
-        classGrade: regRole === 'STUDENT' ? regClassGrade.trim() : undefined,
-        specialization: regRole === 'TEACHER' ? regSpecialization.trim() : undefined,
-        experience: regRole === 'TEACHER' ? Number(regExperience) : undefined,
+        classGrade: regClassGrade.trim(),
       });
       onAuthSuccess(res.user);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Registration failed. Please try a different email.');
+      setErrorMsg(err.message || 'Registration failed. Please check your details or try a different email.');
     } finally {
       setLoading(false);
     }
@@ -238,7 +122,7 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
     <Box
       sx={{
         minHeight: '100vh',
-        bgcolor: '#f4f5f7',
+        bgcolor: '#f1f5f9',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -255,22 +139,22 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 52,
-              height: 52,
+              width: 54,
+              height: 54,
               borderRadius: 3,
               bgcolor: 'primary.main',
               color: '#ffffff',
-              boxShadow: '0 8px 16px rgba(15, 23, 42, 0.15)',
+              boxShadow: '0 8px 20px rgba(15, 23, 42, 0.18)',
               mb: 1.5,
             }}
           >
-            <SchoolIcon sx={{ fontSize: 28 }} />
+            <SchoolIcon sx={{ fontSize: 30 }} />
           </Box>
           <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Mentora Session Booking
+            Mentora Learning & Management
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Role-Based Teacher Booking Platform • Node.js, TypeScript & MongoDB
+            Enterprise Role-Based Academic Management • Super Admin, Admin, Teacher & Student Portals
           </Typography>
         </Box>
 
@@ -283,90 +167,13 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
             overflow: 'hidden',
           }}
         >
-          {/* Quick 1-Click Demo Profiles */}
-          <Box sx={{ bgcolor: '#f8fafc', p: 2.5, borderBottom: '1px solid #e2e8f0' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box
-                  sx={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: '50%',
-                    bgcolor: 'primary.main',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  ⚡
-                </Box>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  1-Click Demo Profiles (Pre-configured RBAC)
-                </Typography>
-              </Box>
-
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={seeding ? <CircularProgress size={12} color="inherit" /> : <SyncIcon sx={{ fontSize: '0.9rem' }} />}
-                onClick={() => handleSeedData()}
-                disabled={seeding || loading}
-                sx={{
-                  fontSize: '0.72rem',
-                  textTransform: 'none',
-                  py: 0.3,
-                  px: 1,
-                  fontWeight: 600,
-                  borderRadius: 1.5,
-                }}
-              >
-                {seeding ? 'Seeding Atlas DB...' : '🌱 Seed Demo Data'}
-              </Button>
-            </Box>
-
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {DEMO_USERS.map((demo) => (
-                <Chip
-                  key={demo.email}
-                  icon={demo.icon}
-                  label={`${demo.name} (${demo.label})`}
-                  color={demo.color}
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleQuickDemoSelect(demo)}
-                  disabled={loading || seeding}
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    bgcolor: '#ffffff',
-                    borderWidth: 1.5,
-                    transition: 'all 0.15s ease',
-                    '&:hover': {
-                      bgcolor: '#f1f5f9',
-                      transform: 'translateY(-1px)',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-                    },
-                  }}
-                />
-              ))}
-            </Box>
-            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 1, fontSize: '0.7rem' }}>
-              💡 Click any demo profile above to instantly sign in with full role privileges (Default password: <code>Password@123</code>).
-            </Typography>
-          </Box>
-
-          {/* Tabs: Sign In vs Create Account */}
+          {/* Tabs: Sign In vs Student Trial Registration */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2.5, bgcolor: '#ffffff' }}>
             <Tabs
               value={tabIndex}
               onChange={(_, val) => {
                 setTabIndex(val);
                 setErrorMsg(null);
-                setSeedSuccessMsg(null);
               }}
               variant="fullWidth"
             >
@@ -377,9 +184,9 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                 sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.9rem', py: 1.8 }}
               />
               <Tab
-                icon={<RegisterIcon fontSize="small" />}
+                icon={<TrialIcon fontSize="small" />}
                 iconPosition="start"
-                label="Create Account (Register)"
+                label="Student 72h Free Trial"
                 sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.9rem', py: 1.8 }}
               />
             </Tabs>
@@ -387,36 +194,9 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
 
           <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
             {/* Feedback Notifications */}
-            {seedSuccessMsg && (
-              <Alert severity="success" sx={{ mb: 2.5 }} onClose={() => setSeedSuccessMsg(null)}>
-                {seedSuccessMsg}
-              </Alert>
-            )}
-
             {errorMsg && (
-              <Alert
-                severity="error"
-                sx={{ mb: 2.5 }}
-                action={
-                  errorMsg.includes('Invalid email or password') || errorMsg.includes('failed') ? (
-                    <Button
-                      color="inherit"
-                      size="small"
-                      onClick={() => handleSeedData(loginEmail || 'abhishek.singh@example.com')}
-                      disabled={seeding}
-                      sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem' }}
-                    >
-                      {seeding ? 'Seeding...' : '🌱 Seed Database Now'}
-                    </Button>
-                  ) : undefined
-                }
-              >
+              <Alert severity="error" sx={{ mb: 2.5 }}>
                 {errorMsg}
-                {errorMsg.includes('Invalid email or password') && (
-                  <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                    Tip: If MongoDB Atlas was freshly created, click &quot;Seed Database Now&quot; to initialize all demo accounts.
-                  </Typography>
-                )}
               </Alert>
             )}
 
@@ -424,16 +204,15 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
             {tabIndex === 0 && (
               <Box component="form" onSubmit={handleLoginSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.2 }}>
                 <TextField
-                  label="Email Address"
+                  label="Email Address (Username)"
                   type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  placeholder="name@school.edu or user@example.com"
                   fullWidth
                   required
                   autoFocus
                   size="medium"
-                  helperText="Use one of the demo emails above or your registered account"
                 />
 
                 <TextField
@@ -462,7 +241,7 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                   type="submit"
                   variant="contained"
                   size="large"
-                  disabled={loading || seeding}
+                  disabled={loading}
                   startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <LockIcon />}
                   sx={{
                     py: 1.4,
@@ -473,16 +252,24 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                     boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)',
                   }}
                 >
-                  {loading ? 'Authenticating & Verifying...' : 'Sign In to Platform'}
+                  {loading ? 'Authenticating & Verifying...' : 'Sign In to Portal'}
                 </Button>
               </Box>
             )}
 
-            {/* TAB 1: CREATE ACCOUNT (REGISTER) FORM */}
+            {/* TAB 1: STUDENT 72-HOUR FREE TRIAL FORM */}
             {tabIndex === 1 && (
               <Box component="form" onSubmit={handleRegisterSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Alert
+                  severity="warning"
+                  icon={<TrialIcon fontSize="inherit" />}
+                  sx={{ py: 1, fontSize: '0.8rem', borderRadius: 2 }}
+                >
+                  <strong>72-Hour Student Free Trial:</strong> Public registration is strictly for students to evaluate the platform for 72 hours. An onboarding email with your credentials will be dispatched immediately. Teachers & Admins must be provisioned after login by their respective administrators.
+                </Alert>
+
                 <TextField
-                  label="Full Name"
+                  label="Student Full Name"
                   type="text"
                   value={regFullName}
                   onChange={(e) => setRegFullName(e.target.value)}
@@ -498,13 +285,13 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                     type="email"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="saurabh@example.com"
+                    placeholder="student@example.com"
                     fullWidth
                     required
                     size="small"
                   />
                   <TextField
-                    label="Phone Number"
+                    label="Mobile Number"
                     type="tel"
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
@@ -515,51 +302,16 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                   />
                 </Box>
 
-                <TextField
-                  select
-                  label="Role (Public Self-Registration)"
-                  value={regRole}
-                  onChange={(e) => setRegRole(e.target.value as 'STUDENT' | 'TEACHER')}
-                  fullWidth
-                  size="small"
-                  helperText={
-                    regRole === 'STUDENT'
-                      ? 'Student: Browse available sessions, book mentorship slots, view learning history.'
-                      : 'Teacher: Schedule availability slots (API 2), manage bookings, mark completed (API 5).'
-                  }
-                >
-                  <MenuItem value="STUDENT">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <SchoolIcon fontSize="small" color="primary" />
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>STUDENT (Learner)</Typography>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="TEACHER">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PersonIcon fontSize="small" color="secondary" />
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>TEACHER (Mentor / Instructor)</Typography>
-                    </Box>
-                  </MenuItem>
-                </TextField>
-
-                <Alert severity="info" icon={<SecurityIcon fontSize="inherit" />} sx={{ py: 0.5, fontSize: '0.75rem', borderRadius: 1.5 }}>
-                  <strong>Enterprise RBAC Governance:</strong> Organization Admins and Super Admins cannot self-register publicly. They are provisioned strictly by Super Admin command center.
-                </Alert>
-
-                {/* Organization Details */}
-                <TextField
-                  label="School / Organization / College"
-                  value={regOrganization}
-                  onChange={(e) => setRegOrganization(e.target.value)}
-                  placeholder="e.g. Delhi Public School (DPS Campus)"
-                  fullWidth
-                  required
-                  size="small"
-                  helperText="Organization where this account will be registered"
-                />
-
-                {/* Additional fields if registering as Student */}
-                {regRole === 'STUDENT' && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+                  <TextField
+                    label="School / Organization / Institute"
+                    value={regOrganization}
+                    onChange={(e) => setRegOrganization(e.target.value)}
+                    placeholder="e.g. Delhi Public School"
+                    fullWidth
+                    required
+                    size="small"
+                  />
                   <TextField
                     label="Assigned Class / Grade"
                     value={regClassGrade}
@@ -568,39 +320,8 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                     fullWidth
                     required
                     size="small"
-                    helperText="Your academic section or cohort"
                   />
-                )}
-
-                {/* Additional fields if registering as Teacher */}
-                {regRole === 'TEACHER' && (
-                  <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'secondary.main', textTransform: 'uppercase' }}>
-                      👨‍🏫 Teacher Profile Details
-                    </Typography>
-                    <TextField
-                      label="Specialization / Subject"
-                      value={regSpecialization}
-                      onChange={(e) => setRegSpecialization(e.target.value)}
-                      placeholder="e.g. Data Structures, Cloud Architecture"
-                      fullWidth
-                      required
-                      size="small"
-                    />
-                    <TextField
-                      label="Years of Experience"
-                      type="number"
-                      value={regExperience}
-                      onChange={(e) => setRegExperience(Math.max(1, parseInt(e.target.value) || 1))}
-                      fullWidth
-                      required
-                      size="small"
-                      slotProps={{
-                        htmlInput: { min: 1, max: 50 },
-                      }}
-                    />
-                  </Box>
-                )}
+                </Box>
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
                   <TextField
@@ -652,7 +373,7 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                   variant="contained"
                   color="primary"
                   size="large"
-                  disabled={loading || seeding}
+                  disabled={loading}
                   startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <CheckIcon />}
                   sx={{
                     mt: 1,
@@ -663,17 +384,17 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                     borderRadius: 2,
                   }}
                 >
-                  {loading ? 'Creating Account & Initializing...' : 'Create Account & Enter Platform'}
+                  {loading ? 'Creating Student Account...' : 'Register & Start 72-Hour Free Trial'}
                 </Button>
               </Box>
             )}
           </CardContent>
         </Card>
 
-        {/* Footer info */}
+        {/* Security Footer */}
         <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-            Mentora Teacher Booking System • Production-Ready RBAC Architecture
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+            <SecurityIcon sx={{ fontSize: 14 }} /> Mentora Secure Institutional Portal • Hierarchical RBAC Isolation Enforced
           </Typography>
         </Box>
       </Container>

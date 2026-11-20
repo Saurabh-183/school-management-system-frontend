@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -25,6 +25,9 @@ import {
   DialogActions,
   TextField,
   Alert,
+  IconButton,
+  Tooltip,
+  InputAdornment,
 } from '@mui/material';
 import {
   SupervisorAccount as AdminIcon,
@@ -32,23 +35,52 @@ import {
   Person as TeacherIcon,
   School as StudentIcon,
   PersonAdd as PersonAddIcon,
-  Add as AddIcon,
   Security as SecurityIcon,
-  CheckCircle as CheckIcon,
   Refresh as RefreshIcon,
+  ListAlt as LogsIcon,
+  Bolt as BoltIcon,
+  Visibility,
+  VisibilityOff,
+  HourglassTop as TrialIcon,
+  FiberManualRecord as DotIcon,
+  ContentCopy as CopyIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
-import { SuperAdminOverviewResponse, User, Teacher } from '@/lib/types';
+import { SuperAdminOverviewResponse, User, ActivityLogUser } from '@/lib/types';
 
 interface MuiSuperAdminDashboardProps {
   currentUser: User | null;
   onRefreshAll?: () => void;
+  onAuthSuccess?: (user: User) => void;
 }
 
-export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAdminDashboardProps) {
+export function MuiSuperAdminDashboard({
+  currentUser,
+  onRefreshAll,
+  onAuthSuccess,
+}: MuiSuperAdminDashboardProps) {
   const [data, setData] = useState<SuperAdminOverviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [tabIndex, setTabIndex] = useState<number>(0); // 0: Admins, 1: Organizations, 2: Teachers, 3: Students
+  const [tabIndex, setTabIndex] = useState<number>(0); // 0: Activity Logs, 1: Admins, 2: Orgs, 3: Teachers, 4: Students
+
+  // Activity Logs Module State
+  const [activityLogs, setActivityLogs] = useState<ActivityLogUser[]>([]);
+  const [activityMetrics, setActivityMetrics] = useState({
+    totalAccounts: 0,
+    onlineAccounts: 0,
+    trialAccounts: 0,
+    deletedOrExpiredAccounts: 0,
+    activeAccounts: 0,
+  });
+  const [isLogsLoading, setIsLogsLoading] = useState<boolean>(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+
+  // Stealth Impersonation Confirmation Modal
+  const [impersonateTarget, setImpersonateTarget] = useState<ActivityLogUser | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(false);
 
   // Create Admin Modal State
   const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
@@ -56,15 +88,16 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('+919876543200');
   const [adminPassword, setAdminPassword] = useState('Password@123');
-  const [adminOrg, setAdminOrg] = useState('St. Xavier’s International School');
+  const [adminOrg, setAdminOrg] = useState('');
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  // Pagination for sub-tables
+  // Pagination
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Fetch Super Admin Overview
   const fetchSuperData = async () => {
     try {
       setIsLoading(true);
@@ -77,9 +110,58 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
     }
   };
 
+  // Fetch Activity Logs
+  const fetchActivityLogs = useCallback(async (status?: string, search?: string) => {
+    try {
+      setIsLogsLoading(true);
+      const res = await api.getActivityLogs(status, search);
+      setActivityLogs(res.logs || []);
+      if (res.metrics) {
+        setActivityMetrics(res.metrics);
+      }
+    } catch (err: any) {
+      console.error('Failed to load activity logs:', err);
+    } finally {
+      setIsLogsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSuperData();
-  }, []);
+    fetchActivityLogs(statusFilter, searchQuery);
+  }, [fetchActivityLogs, statusFilter]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchActivityLogs(statusFilter, searchQuery);
+  };
+
+  const togglePasswordVisibility = (userId: string) => {
+    setShowPasswordMap((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
+
+  // Stealth Impersonation Action
+  const handleConfirmDirectLogin = async () => {
+    if (!impersonateTarget) return;
+    try {
+      setIsImpersonating(true);
+      const res = await api.impersonateLogin({ targetUserId: impersonateTarget._id });
+      setFeedback(`Direct login successful as ${impersonateTarget.fullName}. Activity not recorded.`);
+      setImpersonateTarget(null);
+      if (onAuthSuccess) {
+        onAuthSuccess(res.user);
+      } else {
+        window.location.reload();
+      }
+    } catch (err: any) {
+      setModalError(err.message || 'Direct login failed');
+    } finally {
+      setIsImpersonating(false);
+    }
+  };
 
   const handleCreateAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,9 +183,10 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
       setIsCreateAdminOpen(false);
       setAdminName('');
       setAdminEmail('');
-      setAdminOrg('St. Xavier’s International School');
-      setFeedback('New Organization Administrator provisioned successfully in MongoDB!');
+      setAdminOrg('');
+      setFeedback('New Organization Administrator provisioned & welcome email dispatched!');
       fetchSuperData();
+      fetchActivityLogs(statusFilter, searchQuery);
       if (onRefreshAll) onRefreshAll();
     } catch (err: any) {
       setModalError(err.message || 'Failed to provision admin');
@@ -156,7 +239,7 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.02em', color: '#0f172a' }}>
-                Super Admin Control Center
+                Super Admin Command Center
               </Typography>
               <Chip
                 label="Root Authority"
@@ -166,7 +249,7 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
               />
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3 }}>
-              {currentUser?.fullName} ({currentUser?.email}) • Multi-Tenant School & Organization Provisioning
+              {currentUser?.fullName} ({currentUser?.email}) • Enterprise Multi-Tenant Governance & Audit Logs
             </Typography>
           </Box>
         </Box>
@@ -176,8 +259,11 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
             variant="outlined"
             size="small"
             startIcon={<RefreshIcon />}
-            onClick={fetchSuperData}
-            disabled={isLoading}
+            onClick={() => {
+              fetchSuperData();
+              fetchActivityLogs(statusFilter, searchQuery);
+            }}
+            disabled={isLoading || isLogsLoading}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Refresh
@@ -190,7 +276,7 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
             onClick={() => setIsCreateAdminOpen(true)}
             sx={{ fontWeight: 700, textTransform: 'none', px: 2, borderRadius: 2 }}
           >
-            + Provision New Organization Admin
+            + Provision New School Admin
           </Button>
         </Box>
       </Paper>
@@ -226,7 +312,7 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
               {isLoading ? <CircularProgress size={20} /> : metrics.totalOrganizations}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Schools, Institutes & Colleges
+              Schools & Institutes
             </Typography>
           </CardContent>
         </Card>
@@ -248,13 +334,13 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
         <Card sx={{ border: '1px solid #e2e8f0', borderRadius: 2, boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
           <CardContent sx={{ p: 2 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>
-              Enrolled Students
+              Total Students
             </Typography>
             <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', mt: 0.5 }}>
               {isLoading ? <CircularProgress size={20} /> : metrics.totalStudents}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Across all institutions
+              Enrolled & Trial
             </Typography>
           </CardContent>
         </Card>
@@ -278,34 +364,328 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabIndex} onChange={(_, val) => { setTabIndex(val); setPage(0); }}>
           <Tab
+            icon={<LogsIcon fontSize="small" />}
+            iconPosition="start"
+            label={`Activity Logs & Audit (${activityMetrics.totalAccounts || 0})`}
+            sx={{ textTransform: 'none', fontWeight: 700, color: tabIndex === 0 ? 'error.main' : undefined }}
+          />
+          <Tab
             icon={<AdminIcon fontSize="small" />}
             iconPosition="start"
-            label={`Organization Admins (${data?.admins.length || 0})`}
+            label={`School Admins (${data?.admins.length || 0})`}
             sx={{ textTransform: 'none', fontWeight: 700 }}
           />
           <Tab
             icon={<SchoolIcon fontSize="small" />}
             iconPosition="start"
-            label={`Registered Schools & Orgs (${data?.organizations.length || 0})`}
+            label={`Organizations (${data?.organizations.length || 0})`}
             sx={{ textTransform: 'none', fontWeight: 700 }}
           />
           <Tab
             icon={<TeacherIcon fontSize="small" />}
             iconPosition="start"
-            label={`Faculty Members (${data?.teachers.length || 0})`}
+            label={`Faculty (${data?.teachers.length || 0})`}
             sx={{ textTransform: 'none', fontWeight: 700 }}
           />
           <Tab
             icon={<StudentIcon fontSize="small" />}
             iconPosition="start"
-            label={`Enrolled Students (${data?.students.length || 0})`}
+            label={`Students (${data?.students.length || 0})`}
             sx={{ textTransform: 'none', fontWeight: 700 }}
           />
         </Tabs>
       </Box>
 
-      {/* TAB 0: ORGANIZATION ADMINS LIST */}
+      {/* TAB 0: ACTIVITY LOGS & AUDIT MODULE */}
       {tabIndex === 0 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Activity Logs Filter & Search Bar */}
+          <Paper elevation={0} sx={{ p: 2, borderRadius: 2, border: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+              {/* Quick Status Chips */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                <Chip
+                  label={`All Accounts (${activityMetrics.totalAccounts})`}
+                  color={statusFilter === 'all' ? 'error' : 'default'}
+                  variant={statusFilter === 'all' ? 'filled' : 'outlined'}
+                  size="small"
+                  onClick={() => setStatusFilter('all')}
+                  sx={{ fontWeight: 700, cursor: 'pointer' }}
+                />
+                <Chip
+                  icon={<DotIcon sx={{ fontSize: '10px !important', color: '#16a34a' }} />}
+                  label={`Online Now (${activityMetrics.onlineAccounts})`}
+                  color={statusFilter === 'online' ? 'success' : 'default'}
+                  variant={statusFilter === 'online' ? 'filled' : 'outlined'}
+                  size="small"
+                  onClick={() => setStatusFilter('online')}
+                  sx={{ fontWeight: 700, cursor: 'pointer' }}
+                />
+                <Chip
+                  icon={<TrialIcon fontSize="small" />}
+                  label={`72h Trial Students (${activityMetrics.trialAccounts})`}
+                  color={statusFilter === 'trial' ? 'warning' : 'default'}
+                  variant={statusFilter === 'trial' ? 'filled' : 'outlined'}
+                  size="small"
+                  onClick={() => setStatusFilter('trial')}
+                  sx={{ fontWeight: 700, cursor: 'pointer' }}
+                />
+                <Chip
+                  label={`Expired / Deleted (${activityMetrics.deletedOrExpiredAccounts})`}
+                  color={statusFilter === 'deleted' ? 'default' : 'default'}
+                  variant={statusFilter === 'deleted' ? 'filled' : 'outlined'}
+                  size="small"
+                  onClick={() => setStatusFilter('deleted')}
+                  sx={{ fontWeight: 700, cursor: 'pointer' }}
+                />
+                <Chip
+                  label={`Active Permanent (${activityMetrics.activeAccounts})`}
+                  color={statusFilter === 'active' ? 'primary' : 'default'}
+                  variant={statusFilter === 'active' ? 'filled' : 'outlined'}
+                  size="small"
+                  onClick={() => setStatusFilter('active')}
+                  sx={{ fontWeight: 700, cursor: 'pointer' }}
+                />
+              </Box>
+
+              {/* Search Bar */}
+              <Box component="form" onSubmit={handleSearchSubmit} sx={{ display: 'flex', gap: 1, minWidth: 260 }}>
+                <TextField
+                  placeholder="Search user, email, org..."
+                  size="small"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                  sx={{ bgcolor: '#ffffff' }}
+                />
+                <Button type="submit" variant="outlined" size="small" sx={{ textTransform: 'none', fontWeight: 600 }}>
+                  Search
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+
+          {/* Activity Logs Table */}
+          <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <Table size="small">
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700 }}>Account & Role</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Username (Email)</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Password (Eye Toggle)</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>School / Organization</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Mobile No</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Session Timestamps</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Status & Trial</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }} align="center">
+                    Stealth Direct Login
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {isLogsLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                      <CircularProgress size={24} sx={{ color: 'error.main' }} />
+                      <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                        Loading real-time activity logs...
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : activityLogs && activityLogs.length > 0 ? (
+                  activityLogs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((log) => {
+                    const isPwdVisible = Boolean(showPasswordMap[log._id]);
+
+                    return (
+                      <TableRow key={log._id} hover>
+                        {/* Account & Role */}
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                            {log.fullName}
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mt: 0.3 }}>
+                            <Chip
+                              label={log.role}
+                              size="small"
+                              color={
+                                log.role === 'SUPER_ADMIN'
+                                  ? 'error'
+                                  : log.role === 'ADMIN'
+                                  ? 'warning'
+                                  : log.role === 'TEACHER'
+                                  ? 'secondary'
+                                  : 'primary'
+                              }
+                              sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }}
+                            />
+                            {log.createdByName && (
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+                                by {log.createdByName}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+
+                        {/* Username / Email */}
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                            {log.email}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Password with Eye Toggle */}
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontFamily: 'monospace',
+                                fontWeight: 700,
+                                bgcolor: '#f1f5f9',
+                                px: 1,
+                                py: 0.3,
+                                borderRadius: 1,
+                                fontSize: '0.8rem',
+                              }}
+                            >
+                              {isPwdVisible ? log.plainPassword : '••••••••••••'}
+                            </Typography>
+                            <IconButton size="small" onClick={() => togglePasswordVisibility(log._id)}>
+                              {isPwdVisible ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+
+                        {/* Organization */}
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                            {log.organization}
+                          </Typography>
+                          {log.classGrade && log.classGrade !== 'N/A' && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              {log.classGrade}
+                            </Typography>
+                          )}
+                        </TableCell>
+
+                        {/* Mobile Phone */}
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>
+                            {log.phone || 'N/A'}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Timestamps */}
+                        <TableCell>
+                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.7rem' }}>
+                            <strong>Login:</strong> {log.lastLoginAt ? new Date(log.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                          </Typography>
+                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.7rem' }}>
+                            <strong>Logout:</strong> {log.lastLogoutAt ? new Date(log.lastLogoutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          </Typography>
+                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.7rem' }}>
+                            <strong>Active:</strong> {log.lastActiveAt ? new Date(log.lastActiveAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Status & Trial */}
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <DotIcon sx={{ fontSize: 12, color: log.isOnline ? '#16a34a' : '#94a3b8' }} />
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: log.isOnline ? '#16a34a' : '#64748b' }}>
+                                {log.isOnline ? 'Online' : 'Offline'}
+                              </Typography>
+                            </Box>
+
+                            {log.isTrial ? (
+                              <Chip
+                                icon={<TrialIcon sx={{ fontSize: '12px !important' }} />}
+                                label={
+                                  log.trialRemainingHours && log.trialRemainingHours > 0
+                                    ? `Trial: ${log.trialRemainingHours}h left`
+                                    : 'Trial Expired'
+                                }
+                                size="small"
+                                color={log.trialRemainingHours && log.trialRemainingHours > 0 ? 'warning' : 'error'}
+                                sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }}
+                              />
+                            ) : (
+                              <Chip
+                                label={log.accountStatus}
+                                size="small"
+                                color={log.accountStatus === 'ACTIVE' ? 'success' : 'default'}
+                                variant="outlined"
+                                sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700 }}
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+
+                        {/* Stealth Direct Login */}
+                        <TableCell align="center">
+                          {log._id === currentUser?._id ? (
+                            <Chip label="Current Session" size="small" sx={{ fontWeight: 600, fontSize: '0.68rem' }} />
+                          ) : (
+                            <Button
+                              variant="contained"
+                              size="small"
+                              color="primary"
+                              startIcon={<BoltIcon sx={{ fontSize: '14px !important' }} />}
+                              onClick={() => setImpersonateTarget(log)}
+                              sx={{
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                                py: 0.4,
+                                px: 1.2,
+                                borderRadius: 1.5,
+                                bgcolor: '#0f172a',
+                                '&:hover': { bgcolor: '#1e293b' },
+                              }}
+                            >
+                              Direct Login
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                      No activity logs match the selected filter.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={activityLogs.length}
+              page={page}
+              onPageChange={(_, p) => setPage(p)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </TableContainer>
+        </Box>
+      )}
+
+      {/* TAB 1: ORGANIZATION ADMINS LIST */}
+      {tabIndex === 1 && (
         <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #e2e8f0' }}>
           <Table>
             <TableHead sx={{ bgcolor: '#f8fafc' }}>
@@ -342,163 +722,236 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                    No organization admins found. Click "+ Provision New Organization Admin" above to create one.
+                    No organization admins found. Click "+ Provision New School Admin" above to create one.
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
             component="div"
             count={data?.admins.length || 0}
-            rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={(_, p) => setPage(p)}
-            onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[5, 10, 20]}
           />
         </TableContainer>
       )}
 
-      {/* TAB 1: ORGANIZATIONS DIRECTORY */}
-      {tabIndex === 1 && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
-          {data?.organizations && data.organizations.length > 0 ? (
-            data.organizations.map((org) => (
-              <Card key={org.name} sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                    <Box sx={{ p: 1, bgcolor: '#eff6ff', borderRadius: 2, color: 'primary.main' }}>
-                      <SchoolIcon fontSize="medium" />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                        {org.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Affiliated Educational Institution
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, pt: 1.5, borderTop: '1px solid #f1f5f9' }}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary">Admins</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{org.adminsCount}</Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary">Teachers</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{org.teachersCount}</Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary">Students</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{org.studentsCount}</Typography>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <Typography variant="body2" color="text.secondary">No organizations registered yet.</Typography>
-          )}
-        </Box>
-      )}
-
-      {/* TAB 2: FACULTY & TEACHERS */}
+      {/* TAB 2: ORGANIZATIONS DIRECTORY */}
       {tabIndex === 2 && (
         <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #e2e8f0' }}>
           <Table>
             <TableHead sx={{ bgcolor: '#f8fafc' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Teacher Name</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Organization / School</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Specialization</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Experience</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Organization / School Name</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="center">Admins</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="center">Faculty Mentors</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="center">Enrolled Students</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {data?.teachers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((teacher) => (
-                <TableRow key={teacher._id} hover>
-                  <TableCell sx={{ fontWeight: 600 }}>{teacher.fullName}</TableCell>
-                  <TableCell>{teacher.email}</TableCell>
-                  <TableCell>
-                    <Chip label={teacher.organization || 'General Organization'} size="small" variant="outlined" />
+              {data?.organizations && data.organizations.length > 0 ? (
+                data.organizations.map((org) => (
+                  <TableRow key={org.name} hover>
+                    <TableCell sx={{ fontWeight: 700, color: '#0f172a' }}>{org.name}</TableCell>
+                    <TableCell align="center">
+                      <Chip label={org.adminsCount} size="small" color="warning" sx={{ fontWeight: 700 }} />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip label={org.teachersCount} size="small" color="secondary" sx={{ fontWeight: 700 }} />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip label={org.studentsCount} size="small" color="success" sx={{ fontWeight: 700 }} />
+                    </TableCell>
+                    <TableCell>
+                      <Chip label="Active Institutional Node" size="small" color="primary" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                    No registered organizations yet.
                   </TableCell>
-                  <TableCell>{teacher.specialization}</TableCell>
-                  <TableCell>{teacher.experience} years</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={data?.teachers.length || 0}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={(_, p) => setPage(p)}
-            onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))}
-          />
         </TableContainer>
       )}
 
-      {/* TAB 3: ENROLLED STUDENTS */}
+      {/* TAB 3: FACULTY MEMBERS */}
       {tabIndex === 3 && (
         <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #e2e8f0' }}>
           <Table>
             <TableHead sx={{ bgcolor: '#f8fafc' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Student Name</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Organization / School</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Class / Grade</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Contact Phone</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Mentor Name</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Email Address</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Specialization</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Experience</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Assigned Facility</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {data?.students.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((student) => (
-                <TableRow key={student._id} hover>
-                  <TableCell sx={{ fontWeight: 600 }}>{student.fullName}</TableCell>
-                  <TableCell>{student.email}</TableCell>
-                  <TableCell>
-                    <Chip label={student.organization || 'General Organization'} size="small" variant="outlined" />
+              {data?.teachers && data.teachers.length > 0 ? (
+                data.teachers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((t) => (
+                  <TableRow key={t._id} hover>
+                    <TableCell sx={{ fontWeight: 600 }}>{t.fullName}</TableCell>
+                    <TableCell>{t.email}</TableCell>
+                    <TableCell>{t.specialization}</TableCell>
+                    <TableCell>{t.experience} years</TableCell>
+                    <TableCell>
+                      <Chip label={t.organization || 'General Organization'} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                    No faculty members found.
                   </TableCell>
-                  <TableCell>
-                    <Chip label={student.classGrade || 'Class 12-A'} size="small" color="primary" sx={{ fontWeight: 600 }} />
-                  </TableCell>
-                  <TableCell>{student.phone}</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data?.students.length || 0}
-            rowsPerPage={rowsPerPage}
+            count={data?.teachers.length || 0}
             page={page}
             onPageChange={(_, p) => setPage(p)}
-            onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[5, 10, 20]}
           />
         </TableContainer>
       )}
 
-      {/* PROVISION NEW ADMIN MODAL */}
+      {/* TAB 4: ENROLLED STUDENTS */}
+      {tabIndex === 4 && (
+        <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #e2e8f0' }}>
+          <Table>
+            <TableHead sx={{ bgcolor: '#f8fafc' }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>Student Name</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Email Address</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Class / Grade</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>School / Organization</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Phone</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data?.students && data.students.length > 0 ? (
+                data.students.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((s) => (
+                  <TableRow key={s._id} hover>
+                    <TableCell sx={{ fontWeight: 600 }}>{s.fullName}</TableCell>
+                    <TableCell>{s.email}</TableCell>
+                    <TableCell>
+                      <Chip label={s.classGrade || 'General'} size="small" color="primary" sx={{ fontWeight: 600 }} />
+                    </TableCell>
+                    <TableCell>{s.organization || 'General Organization'}</TableCell>
+                    <TableCell>{s.phone || 'N/A'}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                    No enrolled students found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          <TablePagination
+            component="div"
+            count={data?.students.length || 0}
+            page={page}
+            onPageChange={(_, p) => setPage(p)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[5, 10, 20]}
+          />
+        </TableContainer>
+      )}
+
+      {/* DIALOG: STEALTH IMPERSONATION CONFIRMATION */}
       <Dialog
-        open={isCreateAdminOpen}
-        onClose={() => !modalSubmitting && setIsCreateAdminOpen(false)}
+        open={Boolean(impersonateTarget)}
+        onClose={() => setImpersonateTarget(null)}
         maxWidth="xs"
         fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AdminIcon color="error" />
-          Provision Organization Admin
+          <BoltIcon sx={{ color: '#f59e0b' }} /> Direct Stealth Login
         </DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          {modalError && <Alert severity="error">{modalError}</Alert>}
-          <Typography variant="caption" color="text.secondary">
-            Only Super Admins can provision Admins. Each Admin is tied to a specific School, College, or Institute.
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            You are logging directly into the account of:
           </Typography>
+          <Paper elevation={0} sx={{ p: 2, bgcolor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+              {impersonateTarget?.fullName}
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+              Email: <code>{impersonateTarget?.email}</code>
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+              Role: <strong>{impersonateTarget?.role}</strong> | Org: {impersonateTarget?.organization}
+            </Typography>
+          </Paper>
+          <Alert severity="info" sx={{ fontSize: '0.78rem' }}>
+            🔒 <strong>Stealth Assurance:</strong> This direct login does <em>NOT</em> update the user&apos;s login timestamp, does not trigger security alerts, and leaves existing active sessions uninterrupted.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, pt: 0 }}>
+          <Button onClick={() => setImpersonateTarget(null)} color="inherit" disabled={isImpersonating}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleConfirmDirectLogin}
+            disabled={isImpersonating}
+            startIcon={isImpersonating ? <CircularProgress size={16} color="inherit" /> : <BoltIcon />}
+            sx={{ fontWeight: 700, textTransform: 'none', borderRadius: 2 }}
+          >
+            {isImpersonating ? 'Logging In...' : 'Confirm Direct Login'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* DIALOG: PROVISION NEW ORGANIZATION ADMIN */}
+      <Dialog
+        open={isCreateAdminOpen}
+        onClose={() => setIsCreateAdminOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PersonAddIcon color="error" /> Provision School / Organization Admin
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            Super Admin provisions School Administrators for affiliated academic institutions. An onboarding welcome email with login credentials will be dispatched automatically.
+          </Typography>
+
+          {modalError && <Alert severity="error">{modalError}</Alert>}
+
           <TextField
             label="Admin Full Name"
             value={adminName}
@@ -508,33 +961,39 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
             required
             size="small"
           />
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+            <TextField
+              label="Admin Email Address"
+              type="email"
+              value={adminEmail}
+              onChange={(e) => setAdminEmail(e.target.value)}
+              placeholder="admin@dps.edu"
+              fullWidth
+              required
+              size="small"
+            />
+            <TextField
+              label="Contact Phone"
+              value={adminPhone}
+              onChange={(e) => setAdminPhone(e.target.value)}
+              placeholder="+919876543200"
+              fullWidth
+              size="small"
+            />
+          </Box>
+
           <TextField
-            label="Admin Email Address"
-            type="email"
-            value={adminEmail}
-            onChange={(e) => setAdminEmail(e.target.value)}
-            placeholder="admin@school.com"
-            fullWidth
-            required
-            size="small"
-          />
-          <TextField
-            label="Organization / School Name"
+            label="Organization / School / Campus Name"
             value={adminOrg}
             onChange={(e) => setAdminOrg(e.target.value)}
-            placeholder="e.g. Delhi Public School"
+            placeholder="e.g. Delhi Public School (DPS Campus)"
             fullWidth
             required
             size="small"
+            helperText="The school or college this administrator will manage"
           />
-          <TextField
-            label="Contact Phone"
-            value={adminPhone}
-            onChange={(e) => setAdminPhone(e.target.value)}
-            placeholder="+91 9876543200"
-            fullWidth
-            size="small"
-          />
+
           <TextField
             label="Initial Password"
             value={adminPassword}
@@ -542,21 +1001,22 @@ export function MuiSuperAdminDashboard({ currentUser, onRefreshAll }: MuiSuperAd
             fullWidth
             required
             size="small"
+            helperText="Default password sent in onboarding welcome email"
           />
         </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={() => setIsCreateAdminOpen(false)} disabled={modalSubmitting} color="inherit">
+        <DialogActions sx={{ p: 2.5, pt: 1 }}>
+          <Button onClick={() => setIsCreateAdminOpen(false)} color="inherit" disabled={modalSubmitting}>
             Cancel
           </Button>
           <Button
-            onClick={handleCreateAdminSubmit}
-            disabled={modalSubmitting}
             variant="contained"
             color="error"
-            startIcon={modalSubmitting ? <CircularProgress size={16} color="inherit" /> : <CheckIcon />}
-            sx={{ fontWeight: 700 }}
+            onClick={handleCreateAdminSubmit}
+            disabled={modalSubmitting}
+            startIcon={modalSubmitting ? <CircularProgress size={16} color="inherit" /> : <PersonAddIcon />}
+            sx={{ fontWeight: 700, textTransform: 'none', borderRadius: 2 }}
           >
-            {modalSubmitting ? 'Provisioning...' : 'Provision Admin'}
+            {modalSubmitting ? 'Provisioning...' : 'Provision Admin & Dispatch Email'}
           </Button>
         </DialogActions>
       </Dialog>

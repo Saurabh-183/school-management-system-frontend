@@ -32,9 +32,12 @@ import {
   TaskAlt as CheckCircleOutlineIcon,
   EventAvailable as AvailableIcon,
   AssignmentTurnedIn as CompletedIcon,
+  School as SchoolIcon,
+  PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { TeacherSessionsResponse, User } from '@/lib/types';
 import { formatDate, formatTimeUTC, formatDateTime, getDurationMinutes } from '@/lib/utils';
+import { MuiEnrollStudentDialog } from './MuiEnrollStudentDialog';
 
 interface MuiTeacherDashboardProps {
   teacherData: TeacherSessionsResponse | null;
@@ -55,6 +58,7 @@ export function MuiTeacherDashboard({
 }: MuiTeacherDashboardProps) {
   const [tabIndex, setTabIndex] = useState<number>(0); // 0: Booked (Actionable), 1: Available, 2: Completed
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [isEnrollStudentOpen, setIsEnrollStudentOpen] = useState<boolean>(false);
 
   // Pagination states
   const [bookedPage, setBookedPage] = useState(0);
@@ -161,6 +165,16 @@ export function MuiTeacherDashboard({
               <RefreshIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          <Button
+            variant="outlined"
+            color="primary"
+            size="medium"
+            startIcon={<PersonAddIcon />}
+            onClick={() => setIsEnrollStudentOpen(true)}
+            sx={{ fontWeight: 600 }}
+          >
+            + Enroll Student
+          </Button>
           <Button
             variant="contained"
             color="secondary"
@@ -559,6 +573,14 @@ export function MuiTeacherDashboard({
           </>
         )}
       </Paper>
+
+      {/* Enroll Student Dialog */}
+      <MuiEnrollStudentDialog
+        open={isEnrollStudentOpen}
+        onClose={() => setIsEnrollStudentOpen(false)}
+        currentUser={currentUser}
+        onStudentEnrolled={onRefresh}
+      />
     </Box>
   );
 }

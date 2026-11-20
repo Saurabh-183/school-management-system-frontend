@@ -16,9 +16,6 @@ import {
   CircularProgress,
   IconButton,
   InputAdornment,
-  Chip,
-  Divider,
-  MenuItem,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -26,13 +23,11 @@ import {
   VisibilityOff,
   School as SchoolIcon,
   LockOutlined as LockIcon,
-  Person as PersonIcon,
-  SupervisorAccount as AdminIcon,
-  Security as SecurityIcon,
-  Sync as SyncIcon,
+  Login as LoginIcon,
+  HourglassTop as TrialIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
-import { User, UserRole } from '@/lib/types';
+import { User } from '@/lib/types';
 
 interface MuiAuthModalProps {
   open: boolean;
@@ -40,143 +35,30 @@ interface MuiAuthModalProps {
   onAuthSuccess: (user: User) => void;
 }
 
-const DEMO_USERS = [
-  {
-    name: 'Saurabh Agnihotri (Super Admin)',
-    email: 'superadmin@gmail.com',
-    role: 'SUPER_ADMIN' as UserRole,
-    label: 'Super Admin',
-    icon: <SecurityIcon fontSize="small" />,
-    color: 'error' as const,
-    password: '#*Saurabh8737@',
-    desc: 'Ultimate governance: provision school admins, view all organizations, cross-tenant audit',
-  },
-  {
-    name: 'Prince Agnihotri',
-    email: 'prince.agnihotri@example.com',
-    role: 'ADMIN' as UserRole,
-    label: 'DPS Admin',
-    icon: <AdminIcon fontSize="small" />,
-    color: 'warning' as const,
-    password: 'Password@123',
-    desc: 'School Admin: Delhi Public School (DPS Campus) - manage teachers, classes & students',
-  },
-  {
-    name: 'Abhishek Singh',
-    email: 'abhishek.singh@example.com',
-    role: 'TEACHER' as UserRole,
-    label: 'Teacher',
-    icon: <PersonIcon fontSize="small" />,
-    color: 'secondary' as const,
-    password: 'Password@123',
-    desc: 'Can schedule availability slots, mark booked sessions COMPLETED',
-  },
-  {
-    name: 'Manas Tiwari',
-    email: 'manas.tiwari@example.com',
-    role: 'TEACHER' as UserRole,
-    label: 'Teacher',
-    icon: <PersonIcon fontSize="small" />,
-    color: 'secondary' as const,
-    password: 'Password@123',
-    desc: 'Can schedule availability slots, mark booked sessions COMPLETED',
-  },
-  {
-    name: 'Saurabh Agnihotri',
-    email: 'saurabh.agnihotri@example.com',
-    role: 'STUDENT' as UserRole,
-    label: 'Student',
-    icon: <SchoolIcon fontSize="small" />,
-    color: 'primary' as const,
-    password: 'Password@123',
-    desc: 'Can book slots, view upcoming & completed sessions',
-  },
-  {
-    name: 'Anjali Verma',
-    email: 'anjali.verma@example.com',
-    role: 'STUDENT' as UserRole,
-    label: 'Student',
-    icon: <SchoolIcon fontSize="small" />,
-    color: 'primary' as const,
-    password: 'Password@123',
-    desc: 'Can book slots, view upcoming & completed sessions',
-  },
-];
-
 export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps) {
-  const [tabIndex, setTabIndex] = useState<number>(0); // 0: Login, 1: Register
+  const [tabIndex, setTabIndex] = useState<number>(0);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-  const [selectedDemo, setSelectedDemo] = useState<typeof DEMO_USERS[0] | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [seedSuccessMsg, setSeedSuccessMsg] = useState<string | null>(null);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('Password@123');
+  const [loginPassword, setLoginPassword] = useState('');
 
-  // Register form state
+  // Register form state (Student 72-Hour Trial)
   const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
-  const [regPassword, setRegPassword] = useState('Password@123');
-  const [regRole, setRegRole] = useState<UserRole>('STUDENT');
-
-  const handleSeedData = async (autoLoginDemo?: typeof DEMO_USERS[0]) => {
-    setSeeding(true);
-    setErrorMsg(null);
-    setSeedSuccessMsg(null);
-    try {
-      await api.seedDemoData();
-      setSeedSuccessMsg('Database seeded successfully! Demo accounts & sessions are ready in MongoDB Atlas.');
-      if (autoLoginDemo) {
-        const pass = (autoLoginDemo as any).password || 'Password@123';
-        setLoginEmail(autoLoginDemo.email);
-        setLoginPassword(pass);
-        const res = await api.login({
-          email: autoLoginDemo.email,
-          password: pass,
-        });
-        onAuthSuccess(res.user);
-        onClose();
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Database seeding failed. Please check backend connection.');
-    } finally {
-      setSeeding(false);
-    }
-  };
-
-  const handleQuickDemoSelect = async (demo: typeof DEMO_USERS[0]) => {
-    const pass = (demo as any).password || 'Password@123';
-    setSelectedDemo(demo);
-    setLoginEmail(demo.email);
-    setLoginPassword(pass);
-    setErrorMsg(null);
-    setSeedSuccessMsg(null);
-    setTabIndex(0);
-
-    // Auto-login on demo click for quick convenience
-    try {
-      setLoading(true);
-      const res = await api.login({
-        email: demo.email,
-        password: pass,
-      });
-      onAuthSuccess(res.user);
-      onClose();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Quick login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [regOrganization, setRegOrganization] = useState('');
+  const [regClassGrade, setRegClassGrade] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginEmail || !loginPassword) {
-      setErrorMsg('Please fill in both email and password.');
+    if (!loginEmail.trim() || !loginPassword) {
+      setErrorMsg('Please enter both email address and password.');
       return;
     }
     setErrorMsg(null);
@@ -197,10 +79,26 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regFullName || !regEmail || !regPhone || !regPassword) {
-      setErrorMsg('Please fill in all required registration fields.');
+    if (
+      !regFullName.trim() ||
+      !regEmail.trim() ||
+      !regPhone.trim() ||
+      !regOrganization.trim() ||
+      !regClassGrade.trim() ||
+      !regPassword
+    ) {
+      setErrorMsg('Please complete all required fields.');
       return;
     }
+    if (regPassword !== regConfirmPassword) {
+      setErrorMsg('Passwords do not match. Please re-enter matching passwords.');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+
     setErrorMsg(null);
     setLoading(true);
     try {
@@ -209,12 +107,14 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
         email: regEmail.trim(),
         phone: regPhone.trim(),
         password: regPassword,
-        role: regRole,
+        role: 'STUDENT',
+        organization: regOrganization.trim(),
+        classGrade: regClassGrade.trim(),
       });
       onAuthSuccess(res.user);
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Registration failed.');
+      setErrorMsg(err.message || 'Registration failed. Please try a different email.');
     } finally {
       setLoading(false);
     }
@@ -222,7 +122,7 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
-      <DialogTitle sx={{ m: 0, p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <DialogTitle sx={{ m: 0, p: 2.5, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box
             sx={{
@@ -230,138 +130,76 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
               height: 38,
               borderRadius: 2,
               bgcolor: 'primary.main',
-              color: 'primary.contrastText',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <LockIcon fontSize="small" />
+            <SchoolIcon fontSize="small" />
           </Box>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.2 }}>
-              Authentication & Role-Based Access
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+              Mentora Authentication
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              JWT Access Tokens • RBAC (Student, Teacher, Admin)
+              Sign In or Student 72-Hour Free Trial
             </Typography>
           </Box>
         </Box>
-        <IconButton aria-label="close" onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
-          <CloseIcon fontSize="small" />
+        <IconButton aria-label="close" onClick={onClose} sx={{ color: (theme) => theme.palette.grey[500] }}>
+          <CloseIcon />
         </IconButton>
       </DialogTitle>
 
-      <Divider />
-
-      {/* Quick 1-Click Role Logins */}
-      <Box sx={{ px: 2.5, pt: 2, pb: 1, bgcolor: '#fbfbfb' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexWrap: 'wrap', gap: 1 }}>
-          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            ⚡ 1-Click Demo Profiles (Pre-seeded with RBAC)
-          </Typography>
-          <Button
-            size="small"
-            variant="text"
-            startIcon={seeding ? <CircularProgress size={12} color="inherit" /> : <SyncIcon sx={{ fontSize: '0.9rem' }} />}
-            onClick={() => handleSeedData()}
-            disabled={seeding || loading}
-            sx={{ fontSize: '0.72rem', textTransform: 'none', py: 0.2, px: 0.8, color: 'primary.main', fontWeight: 600 }}
-          >
-            {seeding ? 'Seeding Atlas DB...' : '🌱 Seed Demo Data'}
-          </Button>
-        </Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {DEMO_USERS.map((demo) => (
-            <Chip
-              key={demo.email}
-              icon={demo.icon}
-              label={`${demo.name} (${demo.label})`}
-              color={demo.color}
-              variant="outlined"
-              size="small"
-              onClick={() => handleQuickDemoSelect(demo)}
-              sx={{
-                fontWeight: 600,
-                fontSize: '0.75rem',
-                cursor: 'pointer',
-                bgcolor: '#ffffff',
-                '&:hover': { bgcolor: '#f0f4f8' },
-              }}
-            />
-          ))}
-        </Box>
-      </Box>
-
-      {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2.5 }}>
-        <Tabs value={tabIndex} onChange={(_, val) => { setTabIndex(val); setErrorMsg(null); setSeedSuccessMsg(null); }}>
-          <Tab label="Sign In" sx={{ textTransform: 'none', fontWeight: 600 }} />
-          <Tab label="Create Account (Register)" sx={{ textTransform: 'none', fontWeight: 600 }} />
+        <Tabs
+          value={tabIndex}
+          onChange={(_, val) => {
+            setTabIndex(val);
+            setErrorMsg(null);
+          }}
+          variant="fullWidth"
+        >
+          <Tab icon={<LoginIcon fontSize="small" />} iconPosition="start" label="Sign In" sx={{ textTransform: 'none', fontWeight: 700 }} />
+          <Tab icon={<TrialIcon fontSize="small" />} iconPosition="start" label="Student 72h Trial" sx={{ textTransform: 'none', fontWeight: 700 }} />
         </Tabs>
       </Box>
 
-      <DialogContent sx={{ p: 2.5 }}>
-        {seedSuccessMsg && (
-          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSeedSuccessMsg(null)}>
-            {seedSuccessMsg}
-          </Alert>
-        )}
-
+      <DialogContent sx={{ p: 3 }}>
         {errorMsg && (
-          <Alert
-            severity="error"
-            sx={{ mb: 2 }}
-            action={
-              errorMsg.includes('Invalid email or password') || errorMsg.includes('failed') ? (
-                <Button
-                  color="inherit"
-                  size="small"
-                  onClick={() => handleSeedData(selectedDemo || DEMO_USERS[2])}
-                  disabled={seeding}
-                  sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem' }}
-                >
-                  {seeding ? 'Seeding...' : '🌱 Seed Database Now'}
-                </Button>
-              ) : undefined
-            }
-          >
+          <Alert severity="error" sx={{ mb: 2 }}>
             {errorMsg}
-            {errorMsg.includes('Invalid email or password') && (
-              <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                Tip: The cloud MongoDB database was freshly created and is empty. Click &quot;Seed Database Now&quot; above to initialize all 5 demo accounts.
-              </Typography>
-            )}
           </Alert>
         )}
 
-        {/* Tab 0: Sign In */}
         {tabIndex === 0 && (
-          <Box component="form" onSubmit={handleLoginSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <Box component="form" onSubmit={handleLoginSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               label="Email Address"
               type="email"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
-              placeholder="saurabh.agnihotri@example.com"
+              placeholder="name@school.edu"
               fullWidth
-              size="small"
               required
+              autoFocus
+              size="medium"
             />
-
             <TextField
               label="Password"
               type={showPassword ? 'text' : 'password'}
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
+              placeholder="••••••••"
               fullWidth
-              size="small"
               required
+              size="medium"
               slotProps={{
                 input: {
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton size="small" onClick={() => setShowPassword(!showPassword)} edge="end">
+                      <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
                         {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                       </IconButton>
                     </InputAdornment>
@@ -369,105 +207,133 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
                 },
               }}
             />
-
             <Button
               type="submit"
               variant="contained"
-              fullWidth
+              size="large"
               disabled={loading}
-              sx={{ mt: 1, py: 1, fontWeight: 600 }}
+              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <LockIcon />}
+              sx={{ py: 1.2, fontWeight: 700, textTransform: 'none', borderRadius: 2 }}
             >
-              {loading ? <CircularProgress size={22} color="inherit" /> : 'Sign In with Access Token'}
+              {loading ? 'Signing In...' : 'Sign In'}
             </Button>
           </Box>
         )}
 
-        {/* Tab 1: Create Account */}
         {tabIndex === 1 && (
-          <Box component="form" onSubmit={handleRegisterSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <Box component="form" onSubmit={handleRegisterSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.8 }}>
+            <Alert severity="warning" sx={{ fontSize: '0.78rem', py: 0.5 }}>
+              Students evaluate with a 72-hour trial. Credentials will be emailed. Teachers & Admins must be provisioned internally.
+            </Alert>
             <TextField
               label="Full Name"
               value={regFullName}
               onChange={(e) => setRegFullName(e.target.value)}
               placeholder="e.g. Saurabh Agnihotri"
               fullWidth
-              size="small"
               required
-            />
-
-            <TextField
-              label="Email Address"
-              type="email"
-              value={regEmail}
-              onChange={(e) => setRegEmail(e.target.value)}
-              placeholder="e.g. saurabh@example.com"
-              fullWidth
               size="small"
-              required
             />
-
-            <TextField
-              label="Phone Number"
-              value={regPhone}
-              onChange={(e) => setRegPhone(e.target.value)}
-              placeholder="+91-9876543210"
-              fullWidth
-              size="small"
-              required
-            />
-
-            <TextField
-              select
-              label="Account Role (Public Self-Registration)"
-              value={regRole}
-              onChange={(e) => setRegRole(e.target.value as 'STUDENT' | 'TEACHER')}
-              fullWidth
-              size="small"
-              helperText="Admins are provisioned securely by Super Admin"
-            >
-              <MenuItem value="STUDENT">Student (Book sessions & view history)</MenuItem>
-              <MenuItem value="TEACHER">Teacher (Publish slots & mark completion)</MenuItem>
-            </TextField>
-
-            <TextField
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={regPassword}
-              onChange={(e) => setRegPassword(e.target.value)}
-              fullWidth
-              size="small"
-              required
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton size="small" onClick={() => setShowPassword(!showPassword)} edge="end">
-                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+              <TextField
+                label="Email"
+                type="email"
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="saurabh@example.com"
+                fullWidth
+                required
+                size="small"
+              />
+              <TextField
+                label="Phone"
+                value={regPhone}
+                onChange={(e) => setRegPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+                fullWidth
+                required
+                size="small"
+              />
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+              <TextField
+                label="School / Organization"
+                value={regOrganization}
+                onChange={(e) => setRegOrganization(e.target.value)}
+                placeholder="Delhi Public School"
+                fullWidth
+                required
+                size="small"
+              />
+              <TextField
+                label="Class / Grade"
+                value={regClassGrade}
+                onChange={(e) => setRegClassGrade(e.target.value)}
+                placeholder="Class 12-A"
+                fullWidth
+                required
+                size="small"
+              />
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+              <TextField
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={regPassword}
+                onChange={(e) => setRegPassword(e.target.value)}
+                placeholder="Min 6 characters"
+                fullWidth
+                required
+                size="small"
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
+                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              <TextField
+                label="Confirm Password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={regConfirmPassword}
+                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                fullWidth
+                required
+                size="small"
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end" size="small">
+                          {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            </Box>
             <Button
               type="submit"
               variant="contained"
-              fullWidth
+              size="large"
               disabled={loading}
-              sx={{ mt: 1, py: 1, fontWeight: 600 }}
+              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <SchoolIcon />}
+              sx={{ mt: 1, py: 1.2, fontWeight: 700, textTransform: 'none', borderRadius: 2 }}
             >
-              {loading ? <CircularProgress size={22} color="inherit" /> : 'Register & Generate Token'}
+              {loading ? 'Creating Account...' : 'Register & Start 72-Hour Free Trial'}
             </Button>
           </Box>
         )}
       </DialogContent>
-
-      <DialogActions sx={{ px: 2.5, pb: 2, pt: 0, justifyContent: 'space-between' }}>
-        <Typography variant="caption" color="text.secondary">
-          Password for all demo accounts: <strong>Password@123</strong>
-        </Typography>
-        <Button onClick={onClose} size="small" color="inherit">
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button onClick={onClose} color="inherit" sx={{ textTransform: 'none', fontWeight: 600 }}>
           Close
         </Button>
       </DialogActions>

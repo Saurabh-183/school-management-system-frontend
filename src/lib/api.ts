@@ -99,8 +99,63 @@ export const api = {
     return handleResponse<User>(res);
   },
 
-  logout(): void {
-    clearStoredAuth();
+  async logout(): Promise<void> {
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+    } catch {
+      // Ignore network errors on logout
+    } finally {
+      clearStoredAuth();
+    }
+  },
+
+  // Super Admin: Stealth Impersonation Direct Login (activity not recorded)
+  async impersonateLogin(payload: { targetUserId?: string; email?: string; password?: string }): Promise<AuthResponse> {
+    const res = await fetch(`${API_BASE_URL}/auth/impersonate-login`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await handleResponse<AuthResponse>(res);
+    setStoredAuth(data.accessToken, data.user);
+    return data;
+  },
+
+  // Super Admin: Activity Logs & Audit Module
+  async getActivityLogs(status?: string, search?: string): Promise<import('./types').ActivityLogsResponse> {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.append('status', status);
+    if (search) params.append('search', search);
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/admin/activity-logs${query}`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    return handleResponse<import('./types').ActivityLogsResponse>(res);
+  },
+
+  // School Admin provisions Teacher under their facility
+  async provisionTeacher(payload: import('./types').CreateTeacherPayload): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/admin/create-teacher`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
+
+  // Teacher or Admin enrolls Student under their class/facility
+  async createStudent(payload: import('./types').CreateStudentPayload): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/admin/create-student`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
   },
 
   // API 1: Create User

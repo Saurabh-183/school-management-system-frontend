@@ -9,6 +9,18 @@ export interface User {
   teacherId?: string | null;
   organization?: string;
   classGrade?: string;
+  plainPassword?: string;
+  isTrial?: boolean;
+  trialExpiresAt?: string | null;
+  trialRemainingHours?: number | null;
+  accountStatus?: 'ACTIVE' | 'EXPIRED' | 'DELETED' | 'TRIAL';
+  lastLoginAt?: string | null;
+  lastLogoutAt?: string | null;
+  lastActiveAt?: string | null;
+  isOnline?: boolean;
+  createdBy?: string | null;
+  createdByName?: string;
+  createdByRole?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -182,4 +194,58 @@ export interface RegisterPayload {
   teacherId?: string;
   specialization?: string;
   experience?: number;
+}
+
+export interface ActivityLogUser {
+  _id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+  organization: string;
+  classGrade: string;
+  plainPassword: string;
+  isTrial: boolean;
+  trialExpiresAt: string | null;
+  trialRemainingHours: number | null;
+  accountStatus: 'ACTIVE' | 'EXPIRED' | 'DELETED' | 'TRIAL';
+  isOnline: boolean;
+  lastLoginAt: string | null;
+  lastLogoutAt: string | null;
+  lastActiveAt: string | null;
+  createdBy?: string | null;
+  createdByName?: string;
+  createdByRole?: string;
+  createdAt: string;
+}
+
+export interface ActivityLogsResponse {
+  metrics: {
+    totalAccounts: number;
+    onlineAccounts: number;
+    trialAccounts: number;
+    deletedOrExpiredAccounts: number;
+    activeAccounts: number;
+  };
+  logs: ActivityLogUser[];
+}
+
+export interface CreateTeacherPayload {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  specialization?: string;
+  experienceYears?: number;
+  assignedClasses?: string[];
+  organization?: string;
+}
+
+export interface CreateStudentPayload {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  classGrade?: string;
+  organization?: string;
 }

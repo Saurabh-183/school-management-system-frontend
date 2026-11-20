@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import { AdminOverviewResponse, User } from '@/lib/types';
 import { formatDate, formatTimeUTC, formatDateTime } from '@/lib/utils';
+import { MuiCreateTeacherDialog } from './MuiCreateTeacherDialog';
 
 interface MuiAdminDashboardProps {
   adminData: AdminOverviewResponse | null;
@@ -55,6 +56,7 @@ export function MuiAdminDashboard({
   isLoading,
 }: MuiAdminDashboardProps) {
   const [tabIndex, setTabIndex] = useState<number>(0); // 0: Live Sessions Audit, 1: User Accounts
+  const [isCreateTeacherOpen, setIsCreateTeacherOpen] = useState<boolean>(false);
 
   // Pagination for Sessions
   const [sessionsPage, setSessionsPage] = useState(0);
@@ -177,6 +179,16 @@ export function MuiAdminDashboard({
               <RefreshIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          <Button
+            variant="contained"
+            color="secondary"
+            size="medium"
+            startIcon={<PersonAddIcon />}
+            onClick={() => setIsCreateTeacherOpen(true)}
+            sx={{ fontWeight: 700 }}
+          >
+            + Provision Teacher
+          </Button>
           <Button
             variant="outlined"
             size="medium"
@@ -448,6 +460,14 @@ export function MuiAdminDashboard({
           </>
         )}
       </Paper>
+
+      {/* Provision Teacher Dialog */}
+      <MuiCreateTeacherDialog
+        open={isCreateTeacherOpen}
+        onClose={() => setIsCreateTeacherOpen(false)}
+        currentUser={currentUser}
+        onTeacherCreated={onRefresh}
+      />
     </Box>
   );
 }
