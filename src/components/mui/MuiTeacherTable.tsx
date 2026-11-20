@@ -122,15 +122,15 @@ export function MuiTeacherTable({
         )}
       </Box>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid #e2e8f0', overflowX: 'auto' }}>
         <Table sx={{ minWidth: 650 }}>
           <TableHead sx={{ bgcolor: '#f8fafc' }}>
             <TableRow>
-              <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Mentor Name</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Email</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Domain Specialization</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Experience</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.8rem' }}>RBAC Action</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Mentor Name</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Email</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Domain Specialization</TableCell>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Experience</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>RBAC Action</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

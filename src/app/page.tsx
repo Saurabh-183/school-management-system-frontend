@@ -660,6 +660,9 @@ export default function Home() {
             <Tabs
               value={tabIndex}
               onChange={(_, val) => setTabIndex(val)}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{ minHeight: 48 }}
             >
               <Tab

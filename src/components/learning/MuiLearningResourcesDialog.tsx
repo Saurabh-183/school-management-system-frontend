@@ -418,6 +418,9 @@ export function MuiLearningResourcesDialog({
           }}
           textColor="primary"
           indicatorColor="primary"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{ px: 2 }}
         >
           <Tab

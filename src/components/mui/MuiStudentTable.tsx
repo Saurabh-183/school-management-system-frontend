@@ -115,6 +115,7 @@ export function MuiStudentTable({
               borderRadius: 2,
               px: 2.5,
               py: 1,
+              width: { xs: '100%', sm: 'auto' },
             }}
           >
             + Enroll New Student
@@ -158,22 +159,22 @@ export function MuiStudentTable({
         <Table>
           <TableHead sx={{ bgcolor: '#f8fafc' }}>
             <TableRow>
-              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem' }}>
+              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                 STUDENT PROFILE
               </TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem' }}>
+              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                 CONTACT INFORMATION
               </TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem' }}>
+              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                 INSTITUTION / SCHOOL
               </TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem' }}>
+              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                 CLASS / GRADE
               </TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem' }}>
+              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                 STATUS
               </TableCell>
-              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem' }}>
+              <TableCell sx={{ fontWeight: 800, color: '#475569', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                 ENROLLED DATE
               </TableCell>
             </TableRow>

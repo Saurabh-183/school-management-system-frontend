@@ -133,7 +133,7 @@ export function MuiAvailableSessionsTable({
             slotProps={{
               textField: {
                 size: 'small',
-                sx: { minWidth: 200 },
+                sx: { minWidth: { xs: '100%', sm: 200 }, width: { xs: '100%', sm: 'auto' } },
               },
             }}
           />
@@ -162,11 +162,11 @@ export function MuiAvailableSessionsTable({
               ) : null,
             },
           }}
-          sx={{ flex: 1, minWidth: 220 }}
+          sx={{ flex: 1, minWidth: { xs: '100%', sm: 220 } }}
         />
 
         {/* Specialization Filter Dropdown */}
-        <FormControl size="small" sx={{ minWidth: 200 }}>
+        <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 }, width: { xs: '100%', sm: 'auto' } }}>
           <InputLabel>Specialization</InputLabel>
           <Select
             label="Specialization"
@@ -184,23 +184,23 @@ export function MuiAvailableSessionsTable({
 
         {/* Refresh Button */}
         <Tooltip title="Refresh available slots">
-          <IconButton onClick={onRefresh} sx={{ border: '1px solid #e4e4e7' }}>
+          <IconButton onClick={onRefresh} sx={{ border: '1px solid #e4e4e7', display: { xs: 'none', sm: 'inline-flex' } }}>
             <RefreshIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       </Paper>
 
       {/* Main MUI Table */}
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
         <Table sx={{ minWidth: 700 }} aria-label="available sessions table">
           <TableHead>
             <TableRow>
-              <TableCell>Mentor Details</TableCell>
-              <TableCell>Specialization & Exp</TableCell>
-              <TableCell>Time Window (UTC)</TableCell>
-              <TableCell>Duration</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Action (API 4)</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Mentor Details</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Specialization & Exp</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Time Window (UTC)</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Duration</TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Status</TableCell>
+              <TableCell align="right" sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>Action (API 4)</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

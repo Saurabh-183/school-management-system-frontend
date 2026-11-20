@@ -362,7 +362,13 @@ export function MuiSuperAdminDashboard({
 
       {/* 3. Navigation Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tabIndex} onChange={(_, val) => { setTabIndex(val); setPage(0); }}>
+        <Tabs
+          value={tabIndex}
+          onChange={(_, val) => { setTabIndex(val); setPage(0); }}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
           <Tab
             icon={<LogsIcon fontSize="small" />}
             iconPosition="start"

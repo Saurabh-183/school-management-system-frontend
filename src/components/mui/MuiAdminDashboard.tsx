@@ -278,7 +278,14 @@ export function MuiAdminDashboard({
       {/* 3. Tabbed Tables Section */}
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: '#fbfbfb', px: 2 }}>
-          <Tabs value={tabIndex} onChange={(_, val) => setTabIndex(val)} sx={{ minHeight: 48 }}>
+          <Tabs
+            value={tabIndex}
+            onChange={(_, val) => setTabIndex(val)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            sx={{ minHeight: 48 }}
+          >
             <Tab
               icon={<EventIcon fontSize="small" />}
               iconPosition="start"
