@@ -913,9 +913,6 @@ export function MuiSuperAdminDashboard({
               Role: <strong>{impersonateTarget?.role}</strong> | Org: {impersonateTarget?.organization}
             </Typography>
           </Paper>
-          <Alert severity="info" sx={{ fontSize: '0.78rem' }}>
-            🔒 <strong>Stealth Assurance:</strong> This direct login does <em>NOT</em> update the user&apos;s login timestamp, does not trigger security alerts, and leaves existing active sessions uninterrupted.
-          </Alert>
         </DialogContent>
         <DialogActions sx={{ p: 2.5, pt: 0 }}>
           <Button onClick={() => setImpersonateTarget(null)} color="inherit" disabled={isImpersonating}>
