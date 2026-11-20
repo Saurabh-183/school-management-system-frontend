@@ -28,6 +28,7 @@ import {
   LockOutlined as LockIcon,
   Person as PersonIcon,
   SupervisorAccount as AdminIcon,
+  Security as SecurityIcon,
   Sync as SyncIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
@@ -41,22 +42,24 @@ interface MuiAuthModalProps {
 
 const DEMO_USERS = [
   {
-    name: 'Saurabh Agnihotri',
-    email: 'saurabh.agnihotri@example.com',
-    role: 'STUDENT' as UserRole,
-    label: 'Student',
-    icon: <SchoolIcon fontSize="small" />,
-    color: 'primary' as const,
-    desc: 'Can book slots, view upcoming & completed sessions',
+    name: 'Saurabh Agnihotri (Super Admin)',
+    email: 'superadmin@gmail.com',
+    role: 'SUPER_ADMIN' as UserRole,
+    label: 'Super Admin',
+    icon: <SecurityIcon fontSize="small" />,
+    color: 'error' as const,
+    password: '#*Saurabh8737@',
+    desc: 'Ultimate governance: provision school admins, view all organizations, cross-tenant audit',
   },
   {
-    name: 'Anjali Verma',
-    email: 'anjali.verma@example.com',
-    role: 'STUDENT' as UserRole,
-    label: 'Student',
-    icon: <SchoolIcon fontSize="small" />,
-    color: 'primary' as const,
-    desc: 'Can book slots, view upcoming & completed sessions',
+    name: 'Prince Agnihotri',
+    email: 'prince.agnihotri@example.com',
+    role: 'ADMIN' as UserRole,
+    label: 'DPS Admin',
+    icon: <AdminIcon fontSize="small" />,
+    color: 'warning' as const,
+    password: 'Password@123',
+    desc: 'School Admin: Delhi Public School (DPS Campus) - manage teachers, classes & students',
   },
   {
     name: 'Abhishek Singh',
@@ -65,6 +68,7 @@ const DEMO_USERS = [
     label: 'Teacher',
     icon: <PersonIcon fontSize="small" />,
     color: 'secondary' as const,
+    password: 'Password@123',
     desc: 'Can schedule availability slots, mark booked sessions COMPLETED',
   },
   {
@@ -74,16 +78,28 @@ const DEMO_USERS = [
     label: 'Teacher',
     icon: <PersonIcon fontSize="small" />,
     color: 'secondary' as const,
+    password: 'Password@123',
     desc: 'Can schedule availability slots, mark booked sessions COMPLETED',
   },
   {
-    name: 'Prince Agnihotri',
-    email: 'prince.agnihotri@example.com',
-    role: 'ADMIN' as UserRole,
-    label: 'Admin',
-    icon: <AdminIcon fontSize="small" />,
-    color: 'warning' as const,
-    desc: 'Full system privileges (schedule, book, complete, manage)',
+    name: 'Saurabh Agnihotri',
+    email: 'saurabh.agnihotri@example.com',
+    role: 'STUDENT' as UserRole,
+    label: 'Student',
+    icon: <SchoolIcon fontSize="small" />,
+    color: 'primary' as const,
+    password: 'Password@123',
+    desc: 'Can book slots, view upcoming & completed sessions',
+  },
+  {
+    name: 'Anjali Verma',
+    email: 'anjali.verma@example.com',
+    role: 'STUDENT' as UserRole,
+    label: 'Student',
+    icon: <SchoolIcon fontSize="small" />,
+    color: 'primary' as const,
+    password: 'Password@123',
+    desc: 'Can book slots, view upcoming & completed sessions',
   },
 ];
 
@@ -115,11 +131,12 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
       await api.seedDemoData();
       setSeedSuccessMsg('Database seeded successfully! Demo accounts & sessions are ready in MongoDB Atlas.');
       if (autoLoginDemo) {
+        const pass = (autoLoginDemo as any).password || 'Password@123';
         setLoginEmail(autoLoginDemo.email);
-        setLoginPassword('Password@123');
+        setLoginPassword(pass);
         const res = await api.login({
           email: autoLoginDemo.email,
-          password: 'Password@123',
+          password: pass,
         });
         onAuthSuccess(res.user);
         onClose();
@@ -132,9 +149,10 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
   };
 
   const handleQuickDemoSelect = async (demo: typeof DEMO_USERS[0]) => {
+    const pass = (demo as any).password || 'Password@123';
     setSelectedDemo(demo);
     setLoginEmail(demo.email);
-    setLoginPassword('Password@123');
+    setLoginPassword(pass);
     setErrorMsg(null);
     setSeedSuccessMsg(null);
     setTabIndex(0);
@@ -144,7 +162,7 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
       setLoading(true);
       const res = await api.login({
         email: demo.email,
-        password: 'Password@123',
+        password: pass,
       });
       onAuthSuccess(res.user);
       onClose();
@@ -400,15 +418,15 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
 
             <TextField
               select
-              label="Account Role"
+              label="Account Role (Public Self-Registration)"
               value={regRole}
-              onChange={(e) => setRegRole(e.target.value as UserRole)}
+              onChange={(e) => setRegRole(e.target.value as 'STUDENT' | 'TEACHER')}
               fullWidth
               size="small"
+              helperText="Admins are provisioned securely by Super Admin"
             >
               <MenuItem value="STUDENT">Student (Book sessions & view history)</MenuItem>
               <MenuItem value="TEACHER">Teacher (Publish slots & mark completion)</MenuItem>
-              <MenuItem value="ADMIN">Admin (Full system management)</MenuItem>
             </TextField>
 
             <TextField

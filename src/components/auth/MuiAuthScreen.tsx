@@ -26,10 +26,12 @@ import {
   LockOutlined as LockIcon,
   Person as PersonIcon,
   SupervisorAccount as AdminIcon,
+  Security as SecurityIcon,
   Sync as SyncIcon,
   HowToReg as RegisterIcon,
   Login as LoginIcon,
   CheckCircle as CheckIcon,
+  Apartment as OrganizationIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 import { User, UserRole } from '@/lib/types';
@@ -40,22 +42,24 @@ interface MuiAuthScreenProps {
 
 const DEMO_USERS = [
   {
-    name: 'Saurabh Agnihotri',
-    email: 'saurabh.agnihotri@example.com',
-    role: 'STUDENT' as UserRole,
-    label: 'Student',
-    icon: <SchoolIcon fontSize="small" />,
-    color: 'primary' as const,
-    desc: 'Browse available sessions, book slots, view learning schedule',
+    name: 'Saurabh Agnihotri (Super Admin)',
+    email: 'superadmin@gmail.com',
+    role: 'SUPER_ADMIN' as UserRole,
+    label: 'Super Admin',
+    icon: <SecurityIcon fontSize="small" />,
+    color: 'error' as const,
+    password: '#*Saurabh8737@',
+    desc: 'Ultimate governance: provision school admins, view all organizations, cross-tenant audit',
   },
   {
-    name: 'Anjali Verma',
-    email: 'anjali.verma@example.com',
-    role: 'STUDENT' as UserRole,
-    label: 'Student',
-    icon: <SchoolIcon fontSize="small" />,
-    color: 'primary' as const,
-    desc: 'Browse available sessions, book slots, view learning schedule',
+    name: 'Prince Agnihotri (DPS Admin)',
+    email: 'prince.agnihotri@example.com',
+    role: 'ADMIN' as UserRole,
+    label: 'School Admin',
+    icon: <AdminIcon fontSize="small" />,
+    color: 'warning' as const,
+    password: 'Password@123',
+    desc: 'School Admin: Delhi Public School (DPS Campus) - manage teachers, classes & students',
   },
   {
     name: 'Abhishek Singh',
@@ -64,6 +68,7 @@ const DEMO_USERS = [
     label: 'Teacher',
     icon: <PersonIcon fontSize="small" />,
     color: 'secondary' as const,
+    password: 'Password@123',
     desc: 'Schedule availability slots, manage student bookings, mark COMPLETED',
   },
   {
@@ -73,16 +78,28 @@ const DEMO_USERS = [
     label: 'Teacher',
     icon: <PersonIcon fontSize="small" />,
     color: 'secondary' as const,
+    password: 'Password@123',
     desc: 'Schedule availability slots, manage student bookings, mark COMPLETED',
   },
   {
-    name: 'Prince Agnihotri',
-    email: 'prince.agnihotri@example.com',
-    role: 'ADMIN' as UserRole,
-    label: 'Admin',
-    icon: <AdminIcon fontSize="small" />,
-    color: 'warning' as const,
-    desc: 'Full platform privileges: manage all sessions, schedule, override & inspect',
+    name: 'Saurabh Agnihotri (Student)',
+    email: 'saurabh.agnihotri@example.com',
+    role: 'STUDENT' as UserRole,
+    label: 'Student',
+    icon: <SchoolIcon fontSize="small" />,
+    color: 'primary' as const,
+    password: 'Password@123',
+    desc: 'Browse available sessions, book slots, view learning schedule',
+  },
+  {
+    name: 'Anjali Verma',
+    email: 'anjali.verma@example.com',
+    role: 'STUDENT' as UserRole,
+    label: 'Student',
+    icon: <SchoolIcon fontSize="small" />,
+    color: 'primary' as const,
+    password: 'Password@123',
+    desc: 'Browse available sessions, book slots, view learning schedule',
   },
 ];
 
@@ -103,7 +120,9 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
   const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
-  const [regRole, setRegRole] = useState<UserRole>('STUDENT');
+  const [regRole, setRegRole] = useState<'STUDENT' | 'TEACHER'>('STUDENT');
+  const [regOrganization, setRegOrganization] = useState('Delhi Public School (DPS Campus)');
+  const [regClassGrade, setRegClassGrade] = useState('Class 12-A');
   const [regSpecialization, setRegSpecialization] = useState('Full Stack Web Development & Node.js');
   const [regExperience, setRegExperience] = useState<number>(5);
   const [regPassword, setRegPassword] = useState('Password@123');
@@ -111,8 +130,9 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
 
   // 1-Click Quick Demo Login
   const handleQuickDemoSelect = async (demo: typeof DEMO_USERS[0]) => {
+    const password = (demo as any).password || 'Password@123';
     setLoginEmail(demo.email);
-    setLoginPassword('Password@123');
+    setLoginPassword(password);
     setErrorMsg(null);
     setSeedSuccessMsg(null);
     setTabIndex(0);
@@ -121,7 +141,7 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
       setLoading(true);
       const res = await api.login({
         email: demo.email,
-        password: 'Password@123',
+        password: password,
       });
       onAuthSuccess(res.user);
     } catch (err: any) {
@@ -140,9 +160,10 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
       await api.seedDemoData();
       setSeedSuccessMsg('Database seeded successfully in MongoDB Atlas! Demo accounts & sessions are ready.');
       if (autoLoginEmail) {
+        const pass = autoLoginEmail === 'superadmin@gmail.com' ? '#*Saurabh8737@' : 'Password@123';
         const res = await api.login({
           email: autoLoginEmail,
-          password: 'Password@123',
+          password: pass,
         });
         onAuthSuccess(res.user);
       }
@@ -200,6 +221,8 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
         phone: regPhone.trim(),
         password: regPassword,
         role: regRole,
+        organization: regOrganization.trim(),
+        classGrade: regRole === 'STUDENT' ? regClassGrade.trim() : undefined,
         specialization: regRole === 'TEACHER' ? regSpecialization.trim() : undefined,
         experience: regRole === 'TEACHER' ? Number(regExperience) : undefined,
       });
@@ -494,17 +517,15 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
 
                 <TextField
                   select
-                  label="Role (RBAC Access Level)"
+                  label="Role (Public Self-Registration)"
                   value={regRole}
-                  onChange={(e) => setRegRole(e.target.value as UserRole)}
+                  onChange={(e) => setRegRole(e.target.value as 'STUDENT' | 'TEACHER')}
                   fullWidth
                   size="small"
                   helperText={
                     regRole === 'STUDENT'
-                      ? 'Student: Browse and book mentorship slots, view learning history.'
-                      : regRole === 'TEACHER'
-                      ? 'Teacher: Schedule availability slots, accept bookings, mark sessions complete.'
-                      : 'Admin: Full platform privileges, override bookings, view global analytics.'
+                      ? 'Student: Browse available sessions, book mentorship slots, view learning history.'
+                      : 'Teacher: Schedule availability slots (API 2), manage bookings, mark completed (API 5).'
                   }
                 >
                   <MenuItem value="STUDENT">
@@ -519,13 +540,37 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>TEACHER (Mentor / Instructor)</Typography>
                     </Box>
                   </MenuItem>
-                  <MenuItem value="ADMIN">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <AdminIcon fontSize="small" color="warning" />
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>ADMIN (Platform Administrator)</Typography>
-                    </Box>
-                  </MenuItem>
                 </TextField>
+
+                <Alert severity="info" icon={<SecurityIcon fontSize="inherit" />} sx={{ py: 0.5, fontSize: '0.75rem', borderRadius: 1.5 }}>
+                  <strong>Enterprise RBAC Governance:</strong> Organization Admins and Super Admins cannot self-register publicly. They are provisioned strictly by Super Admin command center.
+                </Alert>
+
+                {/* Organization Details */}
+                <TextField
+                  label="School / Organization / College"
+                  value={regOrganization}
+                  onChange={(e) => setRegOrganization(e.target.value)}
+                  placeholder="e.g. Delhi Public School (DPS Campus)"
+                  fullWidth
+                  required
+                  size="small"
+                  helperText="Organization where this account will be registered"
+                />
+
+                {/* Additional fields if registering as Student */}
+                {regRole === 'STUDENT' && (
+                  <TextField
+                    label="Assigned Class / Grade"
+                    value={regClassGrade}
+                    onChange={(e) => setRegClassGrade(e.target.value)}
+                    placeholder="e.g. Class 12-A"
+                    fullWidth
+                    required
+                    size="small"
+                    helperText="Your academic section or cohort"
+                  />
+                )}
 
                 {/* Additional fields if registering as Teacher */}
                 {regRole === 'TEACHER' && (

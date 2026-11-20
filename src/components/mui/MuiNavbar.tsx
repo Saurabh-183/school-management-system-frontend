@@ -23,6 +23,7 @@ import {
   Login as LoginIcon,
   Logout as LogoutIcon,
   SupervisorAccount as AdminIcon,
+  Security as SecurityIcon,
   Person as TeacherIcon,
   SwapHoriz as SwitchIcon,
 } from '@mui/icons-material';
@@ -51,8 +52,10 @@ export function MuiNavbar({
   onOpenAuthModal,
   onLogout,
 }: MuiNavbarProps) {
-  const getRoleColor = (role?: UserRole): 'primary' | 'secondary' | 'warning' | 'default' => {
+  const getRoleColor = (role?: UserRole): 'primary' | 'secondary' | 'warning' | 'error' | 'default' => {
     switch (role) {
+      case 'SUPER_ADMIN':
+        return 'error';
       case 'ADMIN':
         return 'warning';
       case 'TEACHER':
@@ -66,6 +69,8 @@ export function MuiNavbar({
 
   const getRoleIcon = (role?: UserRole) => {
     switch (role) {
+      case 'SUPER_ADMIN':
+        return <SecurityIcon sx={{ fontSize: '0.9rem' }} />;
       case 'ADMIN':
         return <AdminIcon sx={{ fontSize: '0.9rem' }} />;
       case 'TEACHER':
@@ -75,8 +80,8 @@ export function MuiNavbar({
     }
   };
 
-  const canSchedule = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';
-  const canRegisterStudent = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';
+  const canSchedule = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  const canRegisterStudent = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
 
   return (
     <AppBar
@@ -131,7 +136,7 @@ export function MuiNavbar({
                   height: 30,
                   fontSize: '0.8rem',
                   fontWeight: 700,
-                  bgcolor: currentUser.role === 'ADMIN' ? 'warning.main' : currentUser.role === 'TEACHER' ? 'secondary.main' : 'primary.main',
+                  bgcolor: currentUser.role === 'SUPER_ADMIN' ? 'error.main' : currentUser.role === 'ADMIN' ? 'warning.main' : currentUser.role === 'TEACHER' ? 'secondary.main' : 'primary.main',
                 }}
               >
                 {currentUser.fullName.charAt(0)}
@@ -160,8 +165,8 @@ export function MuiNavbar({
                 }}
               />
 
-              {/* If Admin, allow switching active student context */}
-              {currentUser.role === 'ADMIN' && users.length > 0 && (
+              {/* If Admin / Super Admin, allow switching active student context */}
+              {(currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') && users.length > 0 && (
                 <FormControl size="small" sx={{ minWidth: 140, ml: 0.5, display: { xs: 'none', lg: 'inline-flex' } }}>
                   <Select
                     value={activeUserId}

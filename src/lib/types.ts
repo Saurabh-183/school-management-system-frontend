@@ -1,4 +1,4 @@
-export type UserRole = 'STUDENT' | 'TEACHER' | 'ADMIN';
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'TEACHER' | 'STUDENT';
 
 export interface User {
   _id: string;
@@ -7,6 +7,8 @@ export interface User {
   phone: string;
   role: UserRole;
   teacherId?: string | null;
+  organization?: string;
+  classGrade?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -17,6 +19,8 @@ export interface Teacher {
   email: string;
   specialization: string;
   experience: number;
+  organization?: string;
+  assignedClasses?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -84,6 +88,50 @@ export interface AdminOverviewResponse {
   users: User[];
 }
 
+export interface OrganizationSummary {
+  name: string;
+  adminsCount: number;
+  teachersCount: number;
+  studentsCount: number;
+}
+
+export interface SuperAdminOverviewResponse {
+  metrics: {
+    totalAdmins: number;
+    totalOrganizations: number;
+    totalTeachers: number;
+    totalStudents: number;
+    totalSessions: number;
+  };
+  admins: User[];
+  organizations: OrganizationSummary[];
+  teachers: Teacher[];
+  students: User[];
+  recentSessions: Session[];
+}
+
+export interface SchoolOverviewResponse {
+  organizationName: string;
+  metrics: {
+    totalTeachers: number;
+    totalStudents: number;
+    totalClasses: number;
+    totalSessions: number;
+  };
+  classes: string[];
+  teachers: Teacher[];
+  students: User[];
+  sessions: Session[];
+}
+
+export interface CreateAdminPayload {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  organization: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: User;
@@ -100,6 +148,8 @@ export interface RegisterPayload {
   phone: string;
   password: string;
   role?: UserRole;
+  organization?: string;
+  classGrade?: string;
   teacherId?: string;
   specialization?: string;
   experience?: number;

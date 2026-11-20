@@ -22,6 +22,7 @@ import {
   School as SchoolIcon,
   Person as TeacherIcon,
   SupervisorAccount as AdminIcon,
+  Security as SecurityIcon,
 } from '@mui/icons-material';
 
 import { theme } from '@/theme/theme';
@@ -42,6 +43,7 @@ import { MuiAvailableSessionsTable } from '@/components/mui/MuiAvailableSessions
 import { MuiStudentDashboard } from '@/components/mui/MuiStudentDashboard';
 import { MuiTeacherDashboard } from '@/components/mui/MuiTeacherDashboard';
 import { MuiAdminDashboard } from '@/components/mui/MuiAdminDashboard';
+import { MuiSuperAdminDashboard } from '@/components/mui/MuiSuperAdminDashboard';
 import { MuiTeacherTable } from '@/components/mui/MuiTeacherTable';
 import { MuiCreateSessionDialog } from '@/components/mui/MuiCreateSessionDialog';
 import { MuiCreateUserDialog } from '@/components/mui/MuiCreateUserDialog';
@@ -109,14 +111,14 @@ export default function Home() {
     const token = getStoredToken();
     if (stored && token) {
       setCurrentUser(stored);
-      if (stored.role === 'STUDENT' || stored.role === 'ADMIN') {
+      if (stored.role === 'STUDENT' || stored.role === 'ADMIN' || stored.role === 'SUPER_ADMIN') {
         setActiveUserId(stored._id);
       }
       if (stored.role === 'TEACHER' && stored.teacherId) {
         setPreselectedTeacherId(stored.teacherId);
       }
       // Route to user's default role view
-      if (stored.role === 'TEACHER' || stored.role === 'ADMIN') {
+      if (stored.role === 'SUPER_ADMIN' || stored.role === 'ADMIN' || stored.role === 'TEACHER') {
         setTabIndex(1);
       } else {
         setTabIndex(0);
@@ -249,14 +251,14 @@ export default function Home() {
   // Auth Handlers: Success & Logout
   const handleAuthSuccess = (user: User) => {
     setCurrentUser(user);
-    if (user.role === 'STUDENT' || user.role === 'ADMIN') {
+    if (user.role === 'STUDENT' || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
       setActiveUserId(user._id);
     } else if (user.role === 'TEACHER' && user.teacherId) {
       setPreselectedTeacherId(user.teacherId);
     }
 
     // Switch to optimal initial tab for the logged-in role
-    if (user.role === 'TEACHER' || user.role === 'ADMIN') {
+    if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.role === 'TEACHER') {
       setTabIndex(1);
     } else {
       setTabIndex(0);
@@ -363,16 +365,22 @@ export default function Home() {
 
   // Dynamic Tab 1 Label & Icon based on Active Role
   const getDashboardTabInfo = () => {
-    if (currentUser?.role === 'TEACHER') {
+    if (currentUser?.role === 'SUPER_ADMIN') {
       return {
-        label: `Teacher Schedule (${teacherSessions?.metrics.totalBooked || 0} Booked)`,
-        icon: <TeacherIcon fontSize="small" />,
+        label: 'Super Admin Center (Multi-Org Governance)',
+        icon: <SecurityIcon fontSize="small" />,
       };
     }
     if (currentUser?.role === 'ADMIN') {
       return {
-        label: `Admin Overview (${adminData?.metrics.totalSessions || 0} Sessions)`,
+        label: `School Admin (${adminData?.metrics.totalSessions || 0} Sessions)`,
         icon: <AdminIcon fontSize="small" />,
+      };
+    }
+    if (currentUser?.role === 'TEACHER') {
+      return {
+        label: `Teacher Schedule (${teacherSessions?.metrics.totalBooked || 0} Booked)`,
+        icon: <TeacherIcon fontSize="small" />,
       };
     }
     return {
@@ -542,7 +550,15 @@ export default function Home() {
           {/* Tab 1: Role-Specific Dedicated Dashboards */}
           {tabIndex === 1 && (
             <>
-              {currentUser?.role === 'TEACHER' ? (
+              {currentUser?.role === 'SUPER_ADMIN' ? (
+                /* SUPER ADMIN COMMAND CENTER */
+                <MuiSuperAdminDashboard
+                  currentUser={currentUser}
+                  onRefreshAll={() => {
+                    fetchAvailableSessions(selectedDate, page, rowsPerPage, searchQuery);
+                  }}
+                />
+              ) : currentUser?.role === 'TEACHER' ? (
                 /* TEACHER DASHBOARD */
                 <MuiTeacherDashboard
                   teacherData={teacherSessions}

@@ -166,7 +166,7 @@ export function MuiAdminDashboard({
               />
             </Box>
             <Typography variant="body2" color="text.secondary">
-              {adminEmail} • Full System RBAC Oversight & Management
+              {adminEmail} • <strong>{currentUser?.organization || 'Delhi Public School (DPS Campus)'}</strong> • Teachers, Classes & Students Management
             </Typography>
           </Box>
         </Box>

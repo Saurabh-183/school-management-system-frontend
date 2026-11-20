@@ -214,6 +214,34 @@ export const api = {
     return handleResponse<import('./types').AdminOverviewResponse>(res);
   },
 
+  // Role Dashboard: Super Admin full hierarchy overview
+  async getSuperOverview(): Promise<import('./types').SuperAdminOverviewResponse> {
+    const res = await fetch(`${API_BASE_URL}/admin/super-overview`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    return handleResponse<import('./types').SuperAdminOverviewResponse>(res);
+  },
+
+  // Super Admin: Create new Organization / School Admin
+  async createAdmin(payload: import('./types').CreateAdminPayload): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/admin/create-admin`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
+
+  // Organization / School Admin overview
+  async getSchoolOverview(): Promise<import('./types').SchoolOverviewResponse> {
+    const res = await fetch(`${API_BASE_URL}/admin/school-overview`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    return handleResponse<import('./types').SchoolOverviewResponse>(res);
+  },
+
   // 1-Click Cloud Database Seeder
   async seedDemoData(): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/seed`, {
