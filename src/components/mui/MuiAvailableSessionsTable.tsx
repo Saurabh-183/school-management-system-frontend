@@ -31,10 +31,16 @@ import {
   Schedule as ScheduleIcon,
   BookOnline as BookIcon,
   Refresh as RefreshIcon,
+  MenuBook as MenuBookIcon,
 } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { Session, User } from '@/lib/types';
 import { useDebounce } from '@/lib/useDebounce';
 import { formatTimeUTC, getDurationMinutes } from '@/lib/utils';
+import { MuiLearningResourcesDialog } from '../learning/MuiLearningResourcesDialog';
 
 interface MuiAvailableSessionsTableProps {
   sessions: Session[];
@@ -84,6 +90,7 @@ export function MuiAvailableSessionsTable({
 
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [selectedSpecialization, setSelectedSpecialization] = useState('ALL');
+  const [selectedSessionForResources, setSelectedSessionForResources] = useState<Session | null>(null);
 
   // Available unique specializations
   const specializations = React.useMemo(() => {
@@ -111,27 +118,26 @@ export function MuiAvailableSessionsTable({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      {/* Control Bar: Date Picker, Debounced Search, Specialization Dropdown */}
+      {/* Control Bar: MUI Calendar Date Picker, Debounced Search, Specialization Dropdown */}
       <Paper sx={{ p: 2, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
-        {/* Date Selector */}
-        <TextField
-          label="Session Date"
-          type="date"
-          size="small"
-          value={selectedDate}
-          onChange={(e) => onDateChange(e.target.value)}
-          slotProps={{
-            inputLabel: { shrink: true },
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <CalendarIcon fontSize="small" color="action" />
-                </InputAdornment>
-              ),
-            },
-          }}
-          sx={{ minWidth: 180 }}
-        />
+        {/* MUI Date Calendar Selector */}
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <DatePicker
+            label="Session Date (MUI Calendar)"
+            value={selectedDate ? dayjs(selectedDate) : null}
+            onChange={(newVal) => {
+              if (newVal && newVal.isValid()) {
+                onDateChange(newVal.format('YYYY-MM-DD'));
+              }
+            }}
+            slotProps={{
+              textField: {
+                size: 'small',
+                sx: { minWidth: 200 },
+              },
+            }}
+          />
+        </LocalizationProvider>
 
         {/* Debounced Search */}
         <TextField
@@ -282,48 +288,61 @@ export function MuiAvailableSessionsTable({
                       />
                     </TableCell>
 
-                    {/* Action */}
+                    {/* Actions: Notes & Booking */}
                     <TableCell align="right">
-                      {!currentUser ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
                         <Button
                           variant="outlined"
                           size="small"
-                          color="primary"
-                          onClick={onOpenAuthModal}
-                          sx={{ fontSize: '0.75rem', py: 0.75, fontWeight: 600 }}
+                          color="secondary"
+                          startIcon={<MenuBookIcon fontSize="small" />}
+                          onClick={() => setSelectedSessionForResources(session)}
+                          sx={{ fontSize: '0.72rem', py: 0.6, fontWeight: 700, textTransform: 'none', borderRadius: 1.5 }}
                         >
-                          Sign In to Book
+                          Notes & Lectures
                         </Button>
-                      ) : currentUser.role === 'TEACHER' ? (
-                        <Tooltip title="Teachers cannot book sessions. Switch to a Student or Admin account.">
-                          <span>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              disabled
-                              sx={{ fontSize: '0.75rem', py: 0.75 }}
-                            >
-                              Teacher Account
-                            </Button>
-                          </span>
-                        </Tooltip>
-                      ) : (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          color="primary"
-                          startIcon={isBookingThis ? <CircularProgress size={14} color="inherit" /> : <BookIcon />}
-                          disabled={isBookingThis || !activeUser}
-                          onClick={() => handleBook(session._id)}
-                          sx={{ fontSize: '0.75rem', py: 0.75, fontWeight: 600 }}
-                        >
-                          {isBookingThis
-                            ? 'Booking...'
-                            : activeUser
-                            ? `Book for ${activeUser.fullName.split(' ')[0]}`
-                            : 'Book Slot'}
-                        </Button>
-                      )}
+
+                        {!currentUser ? (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="primary"
+                            onClick={onOpenAuthModal}
+                            sx={{ fontSize: '0.75rem', py: 0.6, fontWeight: 600 }}
+                          >
+                            Sign In to Book
+                          </Button>
+                        ) : currentUser.role === 'TEACHER' ? (
+                          <Tooltip title="Teachers manage their own schedule. Switch to a Student account to book.">
+                            <span>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                disabled
+                                sx={{ fontSize: '0.72rem', py: 0.6 }}
+                              >
+                                Teacher Slot
+                              </Button>
+                            </span>
+                          </Tooltip>
+                        ) : (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="primary"
+                            startIcon={isBookingThis ? <CircularProgress size={14} color="inherit" /> : <BookIcon />}
+                            disabled={isBookingThis || !activeUser}
+                            onClick={() => handleBook(session._id)}
+                            sx={{ fontSize: '0.75rem', py: 0.6, fontWeight: 600 }}
+                          >
+                            {isBookingThis
+                              ? 'Booking...'
+                              : activeUser
+                              ? `Book for ${activeUser.fullName.split(' ')[0]}`
+                              : 'Book Slot'}
+                          </Button>
+                        )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 );
@@ -343,6 +362,15 @@ export function MuiAvailableSessionsTable({
           onRowsPerPageChange={(e) => onRowsPerPageChange(parseInt(e.target.value, 10))}
         />
       </TableContainer>
+
+      {/* In-App Learning Portal: Notes, Video Lectures & Documents */}
+      <MuiLearningResourcesDialog
+        open={Boolean(selectedSessionForResources)}
+        onClose={() => setSelectedSessionForResources(null)}
+        session={selectedSessionForResources}
+        currentUser={currentUser}
+        onResourceAdded={onRefresh}
+      />
     </Box>
   );
 }

@@ -30,9 +30,11 @@ import {
   ArrowForward as ArrowForwardIcon,
   Person as PersonIcon,
   AccessTime as AccessTimeIcon,
+  MenuBook as MenuBookIcon,
 } from '@mui/icons-material';
-import { UserSessionsResponse, User } from '@/lib/types';
+import { UserSessionsResponse, User, Session } from '@/lib/types';
 import { formatDate, formatTimeUTC, formatDateTime, getDurationMinutes } from '@/lib/utils';
+import { MuiLearningResourcesDialog } from '../learning/MuiLearningResourcesDialog';
 
 interface MuiStudentDashboardProps {
   userSessions: UserSessionsResponse | null;
@@ -48,6 +50,7 @@ export function MuiStudentDashboard({
   isLoading,
 }: MuiStudentDashboardProps) {
   const [tabIndex, setTabIndex] = useState<number>(0); // 0: Upcoming, 1: Completed
+  const [selectedSessionForResources, setSelectedSessionForResources] = useState<Session | null>(null);
 
   // Pagination for Upcoming Sessions
   const [upcomingPage, setUpcomingPage] = useState(0);
@@ -250,7 +253,8 @@ export function MuiStudentDashboard({
                             <TableCell>Date</TableCell>
                             <TableCell>Time Window (UTC)</TableCell>
                             <TableCell>Duration</TableCell>
-                            <TableCell align="right">Status</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="right">Course Materials</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -283,7 +287,7 @@ export function MuiStudentDashboard({
                                   sx={{ fontSize: '0.72rem' }}
                                 />
                               </TableCell>
-                              <TableCell align="right">
+                              <TableCell>
                                 <Chip
                                   label="BOOKED"
                                   size="small"
@@ -294,6 +298,18 @@ export function MuiStudentDashboard({
                                     fontSize: '0.7rem',
                                   }}
                                 />
+                              </TableCell>
+                              <TableCell align="right">
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  color="secondary"
+                                  startIcon={<MenuBookIcon fontSize="small" />}
+                                  onClick={() => setSelectedSessionForResources(session)}
+                                  sx={{ textTransform: 'none', fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                                >
+                                  Notes & Lectures
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -342,7 +358,8 @@ export function MuiStudentDashboard({
                             <TableCell>Session Date</TableCell>
                             <TableCell>Time (UTC)</TableCell>
                             <TableCell>Completed At</TableCell>
-                            <TableCell align="right">Status</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="right">Course Materials</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -372,7 +389,7 @@ export function MuiStudentDashboard({
                                   {session.completedAt ? formatDateTime(session.completedAt) : 'Recorded'}
                                 </Typography>
                               </TableCell>
-                              <TableCell align="right">
+                              <TableCell>
                                 <Chip
                                   label="COMPLETED"
                                   size="small"
@@ -383,6 +400,18 @@ export function MuiStudentDashboard({
                                     fontSize: '0.7rem',
                                   }}
                                 />
+                              </TableCell>
+                              <TableCell align="right">
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  color="secondary"
+                                  startIcon={<MenuBookIcon fontSize="small" />}
+                                  onClick={() => setSelectedSessionForResources(session)}
+                                  sx={{ textTransform: 'none', fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                                >
+                                  Notes & Lectures
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -409,6 +438,14 @@ export function MuiStudentDashboard({
           </>
         )}
       </Paper>
+
+      {/* Learning Portal Material Viewer for Students */}
+      <MuiLearningResourcesDialog
+        open={Boolean(selectedSessionForResources)}
+        onClose={() => setSelectedSessionForResources(null)}
+        session={selectedSessionForResources}
+        currentUser={currentUser}
+      />
     </Box>
   );
 }

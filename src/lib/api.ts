@@ -56,6 +56,12 @@ async function handleResponse<T>(res: Response): Promise<T> {
   const json = await res.json().catch(() => null);
   if (!res.ok) {
     const errorMsg = json?.message || `Request failed with status ${res.status}`;
+    if (res.status === 401 && (errorMsg.includes('Session Terminated') || errorMsg.includes('another location'))) {
+      clearStoredAuth();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mentora:session-terminated', { detail: { message: errorMsg } }));
+      }
+    }
     throw new Error(errorMsg);
   }
   return json.data as T;
@@ -240,6 +246,42 @@ export const api = {
       cache: 'no-store',
     });
     return handleResponse<import('./types').SchoolOverviewResponse>(res);
+  },
+
+  // Learning Resources: Notes, Videos, Documents
+  async getSessionResources(sessionId: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/resources`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    return handleResponse<any>(res);
+  },
+
+  async addLectureNote(sessionId: string, data: { title: string; content: string }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/notes`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async addVideoLecture(sessionId: string, data: { title: string; videoUrl: string; duration?: string; description?: string }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/videos`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async addSubjectDocument(sessionId: string, data: { title: string; fileUrl: string; fileType?: string; fileSize?: string }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/documents`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<any>(res);
   },
 
   // 1-Click Cloud Database Seeder

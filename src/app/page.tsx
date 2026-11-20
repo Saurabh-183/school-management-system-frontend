@@ -49,6 +49,8 @@ import { MuiCreateSessionDialog } from '@/components/mui/MuiCreateSessionDialog'
 import { MuiCreateUserDialog } from '@/components/mui/MuiCreateUserDialog';
 import { MuiAuthModal } from '@/components/mui/MuiAuthModal';
 import { ApiInspectorModal } from '@/components/inspector/ApiInspectorModal';
+import { AntiScreenshotProtection } from '@/components/security/AntiScreenshotProtection';
+import { MuiStudentStudyChatbot } from '@/components/chatbot/MuiStudentStudyChatbot';
 
 export default function Home() {
   // Client hydration check
@@ -128,6 +130,17 @@ export default function Home() {
     }
     setIsHydrating(false);
   }, []);
+
+  // Listen for concurrent session termination (Security: single active login)
+  useEffect(() => {
+    const handleTerminated = (e: any) => {
+      const msg = e.detail?.message || 'Session ended: This account was signed in from another location.';
+      showNotification('error', msg);
+      handleLogout();
+    };
+    window.addEventListener('mentora:session-terminated', handleTerminated);
+    return () => window.removeEventListener('mentora:session-terminated', handleTerminated);
+  }, [showNotification]);
 
   // 2. Load Core Users & Teachers ONLY when user is authenticated
   useEffect(() => {
@@ -459,12 +472,13 @@ export default function Home() {
 
   const dashboardTabInfo = getDashboardTabInfo();
 
-  // Authenticated User: Render Full Application
+  // Authenticated User: Render Full Application with DRM Content Protection
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-        {/* Top Navbar with RBAC */}
+      <AntiScreenshotProtection currentUser={currentUser}>
+        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+          {/* Top Navbar with RBAC */}
         <MuiNavbar
           users={users}
           currentUser={currentUser}
@@ -662,22 +676,26 @@ export default function Home() {
           onClose={() => setIsInspectorOpen(false)}
         />
 
-        {/* Feedback Snackbar */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={4000}
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert
-            severity={snackbar.type}
+          {/* Feedback Snackbar */}
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={4000}
             onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-            sx={{ width: '100%', boxShadow: 3 }}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </Box>
+            <Alert
+              severity={snackbar.type}
+              onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+              sx={{ width: '100%', boxShadow: 3 }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
+
+          {/* AI Study Assistant Chatbot (Floating Bottom Right) */}
+          <MuiStudentStudyChatbot currentUser={currentUser} />
+        </Box>
+      </AntiScreenshotProtection>
     </ThemeProvider>
   );
 }

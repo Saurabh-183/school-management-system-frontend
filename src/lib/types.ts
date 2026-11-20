@@ -25,6 +25,32 @@ export interface Teacher {
   updatedAt?: string;
 }
 
+export interface LectureNote {
+  _id?: string;
+  title: string;
+  content: string;
+  authorName?: string;
+  createdAt?: string;
+}
+
+export interface VideoLecture {
+  _id?: string;
+  title: string;
+  videoUrl: string;
+  duration?: string;
+  description?: string;
+  uploadedAt?: string;
+}
+
+export interface SubjectDocument {
+  _id?: string;
+  title: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize?: string;
+  uploadedAt?: string;
+}
+
 export interface Session {
   _id: string;
   teacherId: string | Teacher;
@@ -35,6 +61,9 @@ export interface Session {
   completedAt: string | null;
   teacher?: Teacher;
   user?: User;
+  notes?: LectureNote[];
+  videoLectures?: VideoLecture[];
+  documents?: SubjectDocument[];
   createdAt?: string;
   updatedAt?: string;
 }

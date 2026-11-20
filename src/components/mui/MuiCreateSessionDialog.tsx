@@ -17,6 +17,10 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Teacher } from '@/lib/types';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 
 interface MuiCreateSessionDialogProps {
   open: boolean;
@@ -111,17 +115,25 @@ export function MuiCreateSessionDialog({
             </Select>
           </FormControl>
 
-          {/* Date Picker */}
-          <TextField
-            label="Session Date"
-            type="date"
-            size="small"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            slotProps={{ inputLabel: { shrink: true } }}
-            fullWidth
-            required
-          />
+          {/* MUI Calendar Date Picker */}
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              label="Session Date (MUI Calendar)"
+              value={date ? dayjs(date) : null}
+              onChange={(newVal) => {
+                if (newVal && newVal.isValid()) {
+                  setDate(newVal.format('YYYY-MM-DD'));
+                }
+              }}
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  fullWidth: true,
+                  required: true,
+                },
+              }}
+            />
+          </LocalizationProvider>
 
           {/* Start & End Times */}
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>

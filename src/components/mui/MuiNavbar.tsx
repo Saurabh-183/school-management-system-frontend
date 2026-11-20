@@ -189,27 +189,6 @@ export function MuiNavbar({
                 </FormControl>
               )}
 
-              {/* Switch Role Button */}
-              <Tooltip title="Switch to another user or demo profile">
-                <Button
-                  size="small"
-                  variant="text"
-                  startIcon={<SwitchIcon sx={{ fontSize: '0.85rem' }} />}
-                  onClick={onOpenAuthModal}
-                  sx={{
-                    fontSize: '0.72rem',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 1,
-                    py: 0.3,
-                    color: 'text.secondary',
-                    '&:hover': { color: 'primary.main', bgcolor: '#e2e8f0' },
-                  }}
-                >
-                  Switch Role
-                </Button>
-              </Tooltip>
-
               {/* Logout Button */}
               <Tooltip title="Log Out & Remove Session Token">
                 <Button
@@ -223,7 +202,7 @@ export function MuiNavbar({
                     textTransform: 'none',
                     fontWeight: 700,
                     py: 0.2,
-                    px: 1,
+                    px: 1.2,
                     height: 26,
                     borderRadius: 1.5,
                   }}
