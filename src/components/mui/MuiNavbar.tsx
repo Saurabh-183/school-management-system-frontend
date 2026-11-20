@@ -81,7 +81,7 @@ export function MuiNavbar({
   };
 
   const canSchedule = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
-  const canRegisterStudent = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  const canRegisterStudent = currentUser?.role === 'TEACHER';
 
   return (
     <AppBar
@@ -116,11 +116,11 @@ export function MuiNavbar({
               <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 Mentora
               </Typography>
-              <Chip label="Node.js • TypeScript" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.68rem', fontWeight: 600 }} />
+              {/* <Chip label="Node.js • TypeScript" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.68rem', fontWeight: 600 }} /> */}
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} />
-              REST API Connected :5000
+              Study Management
             </Typography>
           </Box>
         </Box>

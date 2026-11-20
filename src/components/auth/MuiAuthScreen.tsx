@@ -154,7 +154,7 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
             Mentora Learning & Management
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Enterprise Role-Based Academic Management • Super Admin, Admin, Teacher & Student Portals
+            Enterprise Role-Based Academic Management Teacher & Student Portals
           </Typography>
         </Box>
 
@@ -394,7 +394,7 @@ export function MuiAuthScreen({ onAuthSuccess }: MuiAuthScreenProps) {
         {/* Security Footer */}
         <Box sx={{ mt: 3, textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-            <SecurityIcon sx={{ fontSize: 14 }} /> Mentora Secure Institutional Portal • Hierarchical RBAC Isolation Enforced
+            <SecurityIcon sx={{ fontSize: 14 }} /> Mentora Secure Institutional Portal
           </Typography>
         </Box>
       </Container>

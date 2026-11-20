@@ -257,6 +257,7 @@ export default function Home() {
   }, [currentUser, selectedDate, page, rowsPerPage, searchQuery, fetchAvailableSessions]);
 
   // 4. Fetch Student Sessions (API 6)
+  const lastFetchedStudentIdRef = useRef<string>('');
   const fetchUserSessions = useCallback(
     async (userId: string) => {
       if (!userId || !currentUser) return;
@@ -275,11 +276,14 @@ export default function Home() {
 
   useEffect(() => {
     if (currentUser && activeUserId && (currentUser.role === 'STUDENT' || currentUser.role === 'ADMIN')) {
+      if (lastFetchedStudentIdRef.current === activeUserId) return;
+      lastFetchedStudentIdRef.current = activeUserId;
       fetchUserSessions(activeUserId);
     }
   }, [currentUser, activeUserId, fetchUserSessions]);
 
   // 5. Fetch Teacher Schedule & Sessions (For Teacher Role)
+  const lastFetchedTeacherIdRef = useRef<string>('');
   const fetchTeacherSessions = useCallback(
     async (teacherId: string) => {
       if (!teacherId || !currentUser) return;
@@ -299,11 +303,12 @@ export default function Home() {
   useEffect(() => {
     if (currentUser?.role === 'TEACHER') {
       const targetTeacherId = currentUser.teacherId || preselectedTeacherId || (teachers.length > 0 ? teachers[0]._id : '');
-      if (targetTeacherId) {
+      if (targetTeacherId && lastFetchedTeacherIdRef.current !== targetTeacherId) {
+        lastFetchedTeacherIdRef.current = targetTeacherId;
         fetchTeacherSessions(targetTeacherId);
       }
     }
-  }, [currentUser, preselectedTeacherId, teachers, fetchTeacherSessions]);
+  }, [currentUser?.role, currentUser?.teacherId, preselectedTeacherId, teachers, fetchTeacherSessions]);
 
   // 6. Fetch Admin Platform Overview (For Admin Role)
   const fetchAdminData = useCallback(async () => {
@@ -327,6 +332,8 @@ export default function Home() {
 
   // Auth Handlers: Success & Logout
   const handleAuthSuccess = (user: User) => {
+    lastFetchedTeacherIdRef.current = '';
+    lastFetchedStudentIdRef.current = '';
     setCurrentUser(user);
     if (user.role === 'STUDENT' || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
       setActiveUserId(user._id);
@@ -346,6 +353,8 @@ export default function Home() {
   };
 
   const handleLogout = () => {
+    lastFetchedTeacherIdRef.current = '';
+    lastFetchedStudentIdRef.current = '';
     api.logout(); // Removes token and user from localStorage
     setCurrentUser(null);
     setActiveUserId('');
@@ -714,7 +723,7 @@ export default function Home() {
           }}
         >
           <Typography variant="caption" color="text.secondary">
-            Mentora • Enterprise Teacher Session Booking REST API & Multi-Role RBAC Dashboards
+            Mentora • Enterprise Teacher Session
           </Typography>
         </Box>
 

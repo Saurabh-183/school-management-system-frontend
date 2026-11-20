@@ -190,15 +190,6 @@ export function MuiAdminDashboard({
             + Provision Teacher
           </Button>
           <Button
-            variant="outlined"
-            size="medium"
-            startIcon={<PersonAddIcon />}
-            onClick={onOpenCreateUser}
-            sx={{ fontWeight: 600 }}
-          >
-            Register Student (API 1)
-          </Button>
-          <Button
             variant="contained"
             color="warning"
             size="medium"
