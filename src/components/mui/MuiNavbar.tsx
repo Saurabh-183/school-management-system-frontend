@@ -80,7 +80,7 @@ export function MuiNavbar({
     }
   };
 
-  const canSchedule = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  const canSchedule = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';
   const canRegisterStudent = currentUser?.role === 'TEACHER';
 
   return (
