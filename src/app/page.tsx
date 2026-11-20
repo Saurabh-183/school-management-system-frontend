@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   ThemeProvider,
   CssBaseline,
@@ -45,6 +45,7 @@ import { MuiTeacherDashboard } from '@/components/mui/MuiTeacherDashboard';
 import { MuiAdminDashboard } from '@/components/mui/MuiAdminDashboard';
 import { MuiSuperAdminDashboard } from '@/components/mui/MuiSuperAdminDashboard';
 import { MuiTeacherTable } from '@/components/mui/MuiTeacherTable';
+import { MuiStudentTable } from '@/components/mui/MuiStudentTable';
 import { MuiCreateSessionDialog } from '@/components/mui/MuiCreateSessionDialog';
 import { MuiCreateUserDialog } from '@/components/mui/MuiCreateUserDialog';
 import { MuiAuthModal } from '@/components/mui/MuiAuthModal';
@@ -132,6 +133,11 @@ export default function Home() {
   const [users, setUsers] = useState<User[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [activeUserId, setActiveUserId] = useState<string>('');
+
+  // Derived Students List
+  const studentUsers = useMemo(() => {
+    return users.filter((u) => u.role === 'STUDENT');
+  }, [users]);
 
   // Available Sessions (API 3) State with Pagination and Debounced Search
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -669,6 +675,12 @@ export default function Home() {
                 sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.8125rem' }}
               />
               <Tab
+                icon={<SchoolIcon fontSize="small" />}
+                iconPosition="start"
+                label={`Students Directory (${studentUsers.length})`}
+                sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.8125rem' }}
+              />
+              <Tab
                 icon={<PeopleIcon fontSize="small" />}
                 iconPosition="start"
                 label={`Teachers Directory (${teachers.length})`}
@@ -763,8 +775,25 @@ export default function Home() {
             </>
           )}
 
-          {/* Tab 2: Teachers Directory */}
+          {/* Tab 2: Students Directory */}
           {tabIndex === 2 && (
+            <MuiStudentTable
+              students={studentUsers}
+              currentUser={currentUser}
+              onStudentEnrolled={async () => {
+                try {
+                  const refreshedUsers = await api.getUsers();
+                  setUsers(refreshedUsers);
+                  showNotification('success', 'Student directory updated successfully!');
+                } catch (err: any) {
+                  showNotification('error', err.message || 'Failed to refresh student list');
+                }
+              }}
+            />
+          )}
+
+          {/* Tab 3: Teachers Directory */}
+          {tabIndex === 3 && (
             <MuiTeacherTable
               teachers={teachers}
               currentUser={currentUser}
