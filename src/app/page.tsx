@@ -34,6 +34,7 @@ import {
   UserSessionsResponse,
   TeacherSessionsResponse,
   AdminOverviewResponse,
+  AppNotification,
 } from '@/lib/types';
 
 // MUI Custom Components
@@ -52,6 +53,7 @@ import { MuiAuthModal } from '@/components/mui/MuiAuthModal';
 import { ApiInspectorModal } from '@/components/inspector/ApiInspectorModal';
 import { AntiScreenshotProtection } from '@/components/security/AntiScreenshotProtection';
 import { MuiStudentStudyChatbot } from '@/components/chatbot/MuiStudentStudyChatbot';
+import { MuiNotificationDrawer } from '@/components/notifications/MuiNotificationDrawer';
 
 function TrialBanner({ currentUser }: { currentUser: User }) {
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number; isExpired: boolean }>({
@@ -166,6 +168,12 @@ export default function Home() {
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [preselectedTeacherId, setPreselectedTeacherId] = useState<string>('');
 
+  // Notifications State
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(0);
+  const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState<boolean>(false);
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState<boolean>(false);
+
   // Toast / Snackbar Feedback
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -176,6 +184,70 @@ export default function Home() {
   const showNotification = useCallback((type: 'success' | 'error' | 'info', message: string) => {
     setSnackbar({ open: true, type, message });
   }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const res = await api.getNotifications();
+      setNotifications(res.notifications || []);
+      setUnreadNotificationsCount(res.unreadCount || 0);
+    } catch {
+      // background polling
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setNotifications([]);
+      setUnreadNotificationsCount(0);
+      return;
+    }
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 20000);
+    return () => clearInterval(interval);
+  }, [currentUser, fetchNotifications]);
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      await api.markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadNotificationsCount(0);
+      showNotification('success', 'All notifications marked as read');
+    } catch (err: any) {
+      showNotification('error', err.message || 'Failed to mark all as read');
+    }
+  };
+
+  const handleNotificationClick = async (notif: AppNotification) => {
+    try {
+      if (!notif.isRead) {
+        api.markNotificationRead(notif._id).catch(() => {});
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
+        );
+        setUnreadNotificationsCount((prev) => Math.max(0, prev - 1));
+      }
+
+      // Jump to target module
+      if (notif.targetTab === 'schedule') {
+        setTabIndex(1);
+      } else if (notif.targetTab === 'available') {
+        setTabIndex(0);
+      } else if (notif.targetTab === 'teachers') {
+        setTabIndex(2);
+      } else if (notif.targetTab === 'notes' || notif.targetTab === 'videos' || notif.targetTab === 'documents') {
+        if (currentUser?.role === 'STUDENT') {
+          setTabIndex(0);
+        } else if (currentUser?.role === 'TEACHER') {
+          setTabIndex(1);
+        }
+      }
+
+      setIsNotificationDrawerOpen(false);
+    } catch (err: any) {
+      console.error('Error handling notification click:', err);
+    }
+  };
 
   // 1. Initial Client Mount: Check localStorage authentication
   useEffect(() => {
@@ -649,6 +721,8 @@ export default function Home() {
             onLogout={handleLogout}
             isImpersonating={isImpersonating}
             onExitImpersonation={handleExitImpersonation}
+            unreadNotificationsCount={unreadNotificationsCount}
+            onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
           />
 
         {/* 72-Hour Student Trial Countdown Banner */}
@@ -874,6 +948,17 @@ export default function Home() {
               {snackbar.message}
             </Alert>
           </Snackbar>
+
+          {/* Real-Time Notification Center Drawer */}
+          <MuiNotificationDrawer
+            open={isNotificationDrawerOpen}
+            onClose={() => setIsNotificationDrawerOpen(false)}
+            notifications={notifications}
+            unreadCount={unreadNotificationsCount}
+            isLoading={isNotificationsLoading}
+            onMarkAllAsRead={handleMarkAllNotificationsRead}
+            onNotificationClick={handleNotificationClick}
+          />
 
           {/* AI Study Assistant Chatbot (Floating Bottom Right) */}
           <MuiStudentStudyChatbot currentUser={currentUser} />

@@ -7,6 +7,8 @@ import {
   AuthResponse,
   LoginPayload,
   RegisterPayload,
+  NotificationsResponse,
+  AppNotification,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -405,5 +407,30 @@ export const api = {
       throw new Error(json?.message || `Seeding failed with status ${res.status}`);
     }
     return json;
+  },
+
+  // Notification System Endpoints
+  async getNotifications(limit = 30): Promise<NotificationsResponse> {
+    const res = await fetch(`${API_BASE_URL}/notifications?limit=${limit}`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    return handleResponse<NotificationsResponse>(res);
+  },
+
+  async markNotificationRead(notificationId: string): Promise<AppNotification> {
+    const res = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<AppNotification>(res);
+  },
+
+  async markAllNotificationsRead(): Promise<{ modifiedCount: number }> {
+    const res = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{ modifiedCount: number }>(res);
   },
 };

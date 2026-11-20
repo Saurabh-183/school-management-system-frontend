@@ -11,6 +11,7 @@ import {
   IconButton,
   Tooltip,
   Avatar,
+  Badge,
 } from '@mui/material';
 import {
   School as SchoolIcon,
@@ -22,6 +23,7 @@ import {
   SupervisorAccount as AdminIcon,
   Security as SecurityIcon,
   Person as TeacherIcon,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { User, UserRole } from '@/lib/types';
 
@@ -37,6 +39,8 @@ interface MuiNavbarProps {
   onLogout: () => void;
   isImpersonating?: boolean;
   onExitImpersonation?: () => void;
+  unreadNotificationsCount?: number;
+  onOpenNotifications?: () => void;
 }
 
 export function MuiNavbar({
@@ -51,6 +55,8 @@ export function MuiNavbar({
   onLogout,
   isImpersonating,
   onExitImpersonation,
+  unreadNotificationsCount = 0,
+  onOpenNotifications,
 }: MuiNavbarProps) {
   const getRoleColor = (role?: UserRole): 'primary' | 'secondary' | 'warning' | 'error' | 'default' => {
     switch (role) {
@@ -251,6 +257,49 @@ export function MuiNavbar({
             >
               Register Student
             </Button>
+          )}
+
+          {/* Notifications Bell (Top Right Corner with Live Badge) */}
+          {currentUser && (
+            <Tooltip title={unreadNotificationsCount > 0 ? `${unreadNotificationsCount} unread notification(s)` : 'Notifications'}>
+              <IconButton
+                size="small"
+                onClick={onOpenNotifications}
+                sx={{
+                  width: { xs: 32, sm: 36 },
+                  height: { xs: 32, sm: 36 },
+                  border: '1px solid',
+                  borderColor: unreadNotificationsCount > 0 ? '#fca5a5' : '#cbd5e1',
+                  bgcolor: unreadNotificationsCount > 0 ? '#fef2f2' : '#ffffff',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: unreadNotificationsCount > 0 ? '#fee2e2' : '#f1f5f9',
+                    transform: 'scale(1.05)',
+                  },
+                }}
+              >
+                <Badge
+                  badgeContent={unreadNotificationsCount}
+                  color="error"
+                  max={99}
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.65rem',
+                      height: 18,
+                      minWidth: 18,
+                      fontWeight: 800,
+                    },
+                  }}
+                >
+                  <NotificationsIcon
+                    sx={{
+                      fontSize: { xs: 18, sm: 20 },
+                      color: unreadNotificationsCount > 0 ? '#dc2626' : '#64748b',
+                    }}
+                  />
+                </Badge>
+              </IconButton>
+            </Tooltip>
           )}
 
           {/* API Inspector */}

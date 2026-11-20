@@ -249,3 +249,35 @@ export interface CreateStudentPayload {
   classGrade?: string;
   organization?: string;
 }
+
+export type NotificationType =
+  | 'ACADEMIC_RESOURCE'
+  | 'ADMIN_UPDATE'
+  | 'SESSION_BOOKED'
+  | 'SESSION_SCHEDULED'
+  | 'SESSION_COMPLETED'
+  | 'SYSTEM';
+
+export interface AppNotification {
+  _id: string;
+  recipientId: string;
+  senderId?: string | null;
+  senderName: string;
+  senderRole?: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  relatedSessionId?: string | null;
+  relatedResourceType?: 'notes' | 'video' | 'document' | 'session' | 'teacher' | null;
+  targetTab?: string | null;
+  metadata?: Record<string, any>;
+  isRead: boolean;
+  readAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationsResponse {
+  notifications: AppNotification[];
+  unreadCount: number;
+}
