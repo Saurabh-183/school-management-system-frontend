@@ -203,4 +203,18 @@ export const api = {
     });
     return handleResponse<import('./types').AdminOverviewResponse>(res);
   },
+
+  // 1-Click Cloud Database Seeder
+  async seedDemoData(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/seed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reset: true }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(json?.message || `Seeding failed with status ${res.status}`);
+    }
+    return json;
+  },
 };

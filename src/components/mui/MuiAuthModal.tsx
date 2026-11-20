@@ -28,6 +28,7 @@ import {
   LockOutlined as LockIcon,
   Person as PersonIcon,
   SupervisorAccount as AdminIcon,
+  Sync as SyncIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 import { User, UserRole } from '@/lib/types';
@@ -90,7 +91,10 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
   const [tabIndex, setTabIndex] = useState<number>(0); // 0: Login, 1: Register
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [selectedDemo, setSelectedDemo] = useState<typeof DEMO_USERS[0] | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [seedSuccessMsg, setSeedSuccessMsg] = useState<string | null>(null);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -103,10 +107,36 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
   const [regPassword, setRegPassword] = useState('Password@123');
   const [regRole, setRegRole] = useState<UserRole>('STUDENT');
 
+  const handleSeedData = async (autoLoginDemo?: typeof DEMO_USERS[0]) => {
+    setSeeding(true);
+    setErrorMsg(null);
+    setSeedSuccessMsg(null);
+    try {
+      await api.seedDemoData();
+      setSeedSuccessMsg('Database seeded successfully! Demo accounts & sessions are ready in MongoDB Atlas.');
+      if (autoLoginDemo) {
+        setLoginEmail(autoLoginDemo.email);
+        setLoginPassword('Password@123');
+        const res = await api.login({
+          email: autoLoginDemo.email,
+          password: 'Password@123',
+        });
+        onAuthSuccess(res.user);
+        onClose();
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Database seeding failed. Please check backend connection.');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const handleQuickDemoSelect = async (demo: typeof DEMO_USERS[0]) => {
+    setSelectedDemo(demo);
     setLoginEmail(demo.email);
     setLoginPassword('Password@123');
     setErrorMsg(null);
+    setSeedSuccessMsg(null);
     setTabIndex(0);
 
     // Auto-login on demo click for quick convenience
@@ -208,9 +238,21 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
 
       {/* Quick 1-Click Role Logins */}
       <Box sx={{ px: 2.5, pt: 2, pb: 1, bgcolor: '#fbfbfb' }}>
-        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', mb: 1 }}>
-          ⚡ 1-Click Demo Profiles (Pre-seeded with RBAC)
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            ⚡ 1-Click Demo Profiles (Pre-seeded with RBAC)
+          </Typography>
+          <Button
+            size="small"
+            variant="text"
+            startIcon={seeding ? <CircularProgress size={12} color="inherit" /> : <SyncIcon sx={{ fontSize: '0.9rem' }} />}
+            onClick={() => handleSeedData()}
+            disabled={seeding || loading}
+            sx={{ fontSize: '0.72rem', textTransform: 'none', py: 0.2, px: 0.8, color: 'primary.main', fontWeight: 600 }}
+          >
+            {seeding ? 'Seeding Atlas DB...' : '🌱 Seed Demo Data'}
+          </Button>
+        </Box>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
           {DEMO_USERS.map((demo) => (
             <Chip
@@ -235,16 +277,43 @@ export function MuiAuthModal({ open, onClose, onAuthSuccess }: MuiAuthModalProps
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2.5 }}>
-        <Tabs value={tabIndex} onChange={(_, val) => { setTabIndex(val); setErrorMsg(null); }}>
+        <Tabs value={tabIndex} onChange={(_, val) => { setTabIndex(val); setErrorMsg(null); setSeedSuccessMsg(null); }}>
           <Tab label="Sign In" sx={{ textTransform: 'none', fontWeight: 600 }} />
           <Tab label="Create Account (Register)" sx={{ textTransform: 'none', fontWeight: 600 }} />
         </Tabs>
       </Box>
 
       <DialogContent sx={{ p: 2.5 }}>
+        {seedSuccessMsg && (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSeedSuccessMsg(null)}>
+            {seedSuccessMsg}
+          </Alert>
+        )}
+
         {errorMsg && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            action={
+              errorMsg.includes('Invalid email or password') || errorMsg.includes('failed') ? (
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => handleSeedData(selectedDemo || DEMO_USERS[2])}
+                  disabled={seeding}
+                  sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem' }}
+                >
+                  {seeding ? 'Seeding...' : '🌱 Seed Database Now'}
+                </Button>
+              ) : undefined
+            }
+          >
             {errorMsg}
+            {errorMsg.includes('Invalid email or password') && (
+              <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                Tip: The cloud MongoDB database was freshly created and is empty. Click &quot;Seed Database Now&quot; above to initialize all 5 demo accounts.
+              </Typography>
+            )}
           </Alert>
         )}
 
