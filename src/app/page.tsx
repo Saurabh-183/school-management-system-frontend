@@ -22,8 +22,6 @@ import {
   School as SchoolIcon,
   Person as TeacherIcon,
   SupervisorAccount as AdminIcon,
-  Logout as LogoutIcon,
-  SwapHoriz as SwitchIcon,
 } from '@mui/icons-material';
 
 import { theme } from '@/theme/theme';
@@ -473,102 +471,6 @@ export default function Home() {
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onLogout={handleLogout}
         />
-
-        {/* Prominent Active Role Banner */}
-        <Box
-          sx={{
-            bgcolor:
-              currentUser.role === 'ADMIN'
-                ? '#fffbeb'
-                : currentUser.role === 'TEACHER'
-                ? '#faf5ff'
-                : '#eff6ff',
-            borderBottom: '1px solid',
-            borderColor:
-              currentUser.role === 'ADMIN'
-                ? '#fde68a'
-                : currentUser.role === 'TEACHER'
-                ? '#e9d5ff'
-                : '#bfdbfe',
-            py: 1.5,
-            px: { xs: 2, sm: 3 },
-          }}
-        >
-          <Container maxWidth="lg">
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: { xs: 'flex-start', sm: 'center' },
-                justifyContent: 'space-between',
-                flexDirection: { xs: 'column', sm: 'row' },
-                gap: 1.5,
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                <Chip
-                  icon={
-                    currentUser.role === 'ADMIN' ? (
-                      <AdminIcon fontSize="small" />
-                    ) : currentUser.role === 'TEACHER' ? (
-                      <TeacherIcon fontSize="small" />
-                    ) : (
-                      <SchoolIcon fontSize="small" />
-                    )
-                  }
-                  label={`ACTIVE ROLE: ${currentUser.role}`}
-                  color={
-                    currentUser.role === 'ADMIN'
-                      ? 'warning'
-                      : currentUser.role === 'TEACHER'
-                      ? 'secondary'
-                      : 'primary'
-                  }
-                  sx={{
-                    fontWeight: 800,
-                    fontSize: '0.75rem',
-                    letterSpacing: '0.04em',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                  }}
-                />
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>
-                    {currentUser.fullName} <Typography component="span" variant="caption" sx={{ color: 'text.secondary' }}>({currentUser.email})</Typography>
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#475569', display: 'block', fontWeight: 500 }}>
-                    {currentUser.role === 'STUDENT' &&
-                      '🎓 Student Privileges: Browse available slots (API 3), book sessions (API 4), and track upcoming & completed schedule (API 6).'}
-                    {currentUser.role === 'TEACHER' &&
-                      '👨‍🏫 Teacher Privileges: Schedule availability slots (API 2), manage student bookings, and mark sessions COMPLETED (API 5).'}
-                    {currentUser.role === 'ADMIN' &&
-                      '🛡️ Administrator Privileges: Full platform control, schedule slots, override bookings, complete sessions, and inspect aggregation pipelines.'}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<SwitchIcon fontSize="small" />}
-                  onClick={() => setIsAuthModalOpen(true)}
-                  sx={{ textTransform: 'none', fontSize: '0.75rem', fontWeight: 600, py: 0.3 }}
-                >
-                  Switch Role
-                </Button>
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="error"
-                  startIcon={<LogoutIcon fontSize="small" />}
-                  onClick={handleLogout}
-                  sx={{ textTransform: 'none', fontSize: '0.75rem', fontWeight: 700, py: 0.3 }}
-                >
-                  Sign Out
-                </Button>
-              </Box>
-            </Box>
-          </Container>
-        </Box>
 
         {/* Tab Navigation */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>

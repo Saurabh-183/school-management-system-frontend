@@ -24,6 +24,7 @@ import {
   Logout as LogoutIcon,
   SupervisorAccount as AdminIcon,
   Person as TeacherIcon,
+  SwapHoriz as SwitchIcon,
 } from '@mui/icons-material';
 import { User, UserRole } from '@/lib/types';
 
@@ -187,6 +188,7 @@ export function MuiNavbar({
                 <Button
                   size="small"
                   variant="text"
+                  startIcon={<SwitchIcon sx={{ fontSize: '0.85rem' }} />}
                   onClick={onOpenAuthModal}
                   sx={{
                     fontSize: '0.72rem',
@@ -198,7 +200,7 @@ export function MuiNavbar({
                     '&:hover': { color: 'primary.main', bgcolor: '#e2e8f0' },
                   }}
                 >
-                  Switch
+                  Switch Role
                 </Button>
               </Tooltip>
 
