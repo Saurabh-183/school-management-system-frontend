@@ -11,6 +11,9 @@ import {
   Snackbar,
   Alert,
   Typography,
+  Chip,
+  Button,
+  CircularProgress,
 } from '@mui/material';
 import {
   EventAvailable as EventAvailableIcon,
@@ -19,10 +22,12 @@ import {
   School as SchoolIcon,
   Person as TeacherIcon,
   SupervisorAccount as AdminIcon,
+  Logout as LogoutIcon,
+  SwapHoriz as SwitchIcon,
 } from '@mui/icons-material';
 
 import { theme } from '@/theme/theme';
-import { api, getStoredUser, clearStoredAuth } from '@/lib/api';
+import { api, getStoredUser, getStoredToken } from '@/lib/api';
 import {
   User,
   Teacher,
@@ -34,6 +39,7 @@ import {
 
 // MUI Custom Components
 import { MuiNavbar } from '@/components/mui/MuiNavbar';
+import { MuiAuthScreen } from '@/components/auth/MuiAuthScreen';
 import { MuiAvailableSessionsTable } from '@/components/mui/MuiAvailableSessionsTable';
 import { MuiStudentDashboard } from '@/components/mui/MuiStudentDashboard';
 import { MuiTeacherDashboard } from '@/components/mui/MuiTeacherDashboard';
@@ -45,12 +51,15 @@ import { MuiAuthModal } from '@/components/mui/MuiAuthModal';
 import { ApiInspectorModal } from '@/components/inspector/ApiInspectorModal';
 
 export default function Home() {
-  // Navigation
-  const [tabIndex, setTabIndex] = useState<number>(0);
+  // Client hydration check
+  const [isHydrating, setIsHydrating] = useState<boolean>(true);
 
   // Authentication & RBAC State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Navigation: 0: Available Sessions, 1: Role Dashboard, 2: Teachers
+  const [tabIndex, setTabIndex] = useState<number>(0);
 
   // Core Data
   const [users, setUsers] = useState<User[]>([]);
@@ -95,11 +104,12 @@ export default function Home() {
     setSnackbar({ open: true, type, message });
   }, []);
 
-  // 1. Initialize Date & Stored User on client mount
+  // 1. Initial Client Mount: Check localStorage authentication
   useEffect(() => {
     setSelectedDate(new Date().toISOString().split('T')[0]);
     const stored = getStoredUser();
-    if (stored) {
+    const token = getStoredToken();
+    if (stored && token) {
       setCurrentUser(stored);
       if (stored.role === 'STUDENT' || stored.role === 'ADMIN') {
         setActiveUserId(stored._id);
@@ -107,14 +117,21 @@ export default function Home() {
       if (stored.role === 'TEACHER' && stored.teacherId) {
         setPreselectedTeacherId(stored.teacherId);
       }
+      // Route to user's default role view
+      if (stored.role === 'TEACHER' || stored.role === 'ADMIN') {
+        setTabIndex(1);
+      } else {
+        setTabIndex(0);
+      }
+    } else {
+      setCurrentUser(null);
     }
+    setIsHydrating(false);
   }, []);
 
-  // 2. Load Users & Teachers ONCE on mount (preventing duplicate /users and /teachers requests)
-  const initialLoadDone = useRef(false);
+  // 2. Load Core Users & Teachers ONLY when user is authenticated
   useEffect(() => {
-    if (initialLoadDone.current) return;
-    initialLoadDone.current = true;
+    if (!currentUser) return;
 
     const loadInitialData = async () => {
       try {
@@ -122,20 +139,21 @@ export default function Home() {
         setUsers(usersList);
         setTeachers(teachersList);
 
-        // If no user is logged in, select default student
-        setActiveUserId((prev) => prev || (usersList.length > 0 ? usersList[0]._id : ''));
+        if (!activeUserId && (currentUser.role === 'STUDENT' || currentUser.role === 'ADMIN')) {
+          setActiveUserId(currentUser._id);
+        }
       } catch (err: any) {
         showNotification('error', `Failed to load initial data: ${err.message}`);
       }
     };
 
     loadInitialData();
-  }, [showNotification]);
+  }, [currentUser, activeUserId, showNotification]);
 
   // 3. Fetch Available Sessions with Backend Pagination & Debounced Search (API 3)
   const fetchAvailableSessions = useCallback(
     async (dateStr: string, pageNum: number, limit: number, query: string) => {
-      if (!dateStr) return;
+      if (!dateStr || !currentUser) return;
       try {
         setIsSessionsLoading(true);
         const targetDate = new Date(`${dateStr}T00:00:00.000Z`);
@@ -152,19 +170,19 @@ export default function Home() {
         setIsSessionsLoading(false);
       }
     },
-    [showNotification]
+    [currentUser, showNotification]
   );
 
   useEffect(() => {
-    if (selectedDate) {
+    if (currentUser && selectedDate) {
       fetchAvailableSessions(selectedDate, page, rowsPerPage, searchQuery);
     }
-  }, [selectedDate, page, rowsPerPage, searchQuery, fetchAvailableSessions]);
+  }, [currentUser, selectedDate, page, rowsPerPage, searchQuery, fetchAvailableSessions]);
 
   // 4. Fetch Student Sessions (API 6)
   const fetchUserSessions = useCallback(
     async (userId: string) => {
-      if (!userId) return;
+      if (!userId || !currentUser) return;
       try {
         setIsUserSessionsLoading(true);
         const res = await api.getUserSessions(userId);
@@ -175,19 +193,19 @@ export default function Home() {
         setIsUserSessionsLoading(false);
       }
     },
-    [showNotification]
+    [currentUser, showNotification]
   );
 
   useEffect(() => {
-    if (activeUserId && (currentUser?.role === 'STUDENT' || !currentUser || currentUser?.role === 'ADMIN')) {
+    if (currentUser && activeUserId && (currentUser.role === 'STUDENT' || currentUser.role === 'ADMIN')) {
       fetchUserSessions(activeUserId);
     }
-  }, [activeUserId, currentUser, fetchUserSessions]);
+  }, [currentUser, activeUserId, fetchUserSessions]);
 
   // 5. Fetch Teacher Schedule & Sessions (For Teacher Role)
   const fetchTeacherSessions = useCallback(
     async (teacherId: string) => {
-      if (!teacherId) return;
+      if (!teacherId || !currentUser) return;
       try {
         setIsTeacherSessionsLoading(true);
         const res = await api.getTeacherSessions(teacherId);
@@ -198,20 +216,21 @@ export default function Home() {
         setIsTeacherSessionsLoading(false);
       }
     },
-    [showNotification]
+    [currentUser, showNotification]
   );
 
   useEffect(() => {
     if (currentUser?.role === 'TEACHER') {
-      const targetTeacherId = currentUser.teacherId || (teachers.length > 0 ? teachers[0]._id : '');
+      const targetTeacherId = currentUser.teacherId || preselectedTeacherId || (teachers.length > 0 ? teachers[0]._id : '');
       if (targetTeacherId) {
         fetchTeacherSessions(targetTeacherId);
       }
     }
-  }, [currentUser, teachers, fetchTeacherSessions]);
+  }, [currentUser, preselectedTeacherId, teachers, fetchTeacherSessions]);
 
   // 6. Fetch Admin Platform Overview (For Admin Role)
   const fetchAdminData = useCallback(async () => {
+    if (!currentUser || currentUser.role !== 'ADMIN') return;
     try {
       setIsAdminDataLoading(true);
       const res = await api.getAdminOverview();
@@ -221,7 +240,7 @@ export default function Home() {
     } finally {
       setIsAdminDataLoading(false);
     }
-  }, [showNotification]);
+  }, [currentUser, showNotification]);
 
   useEffect(() => {
     if (currentUser?.role === 'ADMIN') {
@@ -229,27 +248,36 @@ export default function Home() {
     }
   }, [currentUser, fetchAdminData]);
 
-  // Auth Handlers
+  // Auth Handlers: Success & Logout
   const handleAuthSuccess = (user: User) => {
     setCurrentUser(user);
     if (user.role === 'STUDENT' || user.role === 'ADMIN') {
       setActiveUserId(user._id);
     } else if (user.role === 'TEACHER' && user.teacherId) {
       setPreselectedTeacherId(user.teacherId);
-      fetchTeacherSessions(user.teacherId);
     }
-    if (user.role === 'ADMIN') {
-      fetchAdminData();
+
+    // Switch to optimal initial tab for the logged-in role
+    if (user.role === 'TEACHER' || user.role === 'ADMIN') {
+      setTabIndex(1);
+    } else {
+      setTabIndex(0);
     }
-    showNotification('success', `Signed in as ${user.fullName} (${user.role})`);
+
+    setIsAuthModalOpen(false);
+    showNotification('success', `Welcome, ${user.fullName}! Logged in as ${user.role}.`);
   };
 
   const handleLogout = () => {
-    api.logout();
+    api.logout(); // Removes token and user from localStorage
     setCurrentUser(null);
+    setActiveUserId('');
+    setUserSessions(null);
     setTeacherSessions(null);
     setAdminData(null);
-    showNotification('info', 'Logged out successfully');
+    setTabIndex(0);
+    setIsAuthModalOpen(false);
+    showNotification('info', 'Logged out successfully. All session tokens removed.');
   };
 
   // Handler: Book a Session (API 4)
@@ -264,36 +292,29 @@ export default function Home() {
       await api.bookSession(sessionId, bookingUserId);
       showNotification('success', 'Session booked successfully!');
       fetchAvailableSessions(selectedDate, page, rowsPerPage, searchQuery);
-      if (bookingUserId) {
-        fetchUserSessions(bookingUserId);
-      }
-      if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
-        fetchTeacherSessions(currentUser.teacherId);
-      }
-      if (currentUser?.role === 'ADMIN') {
-        fetchAdminData();
-      }
+      fetchUserSessions(bookingUserId);
+      if (currentUser?.role === 'ADMIN') fetchAdminData();
     } catch (err: any) {
-      showNotification('error', err.message);
+      showNotification('error', err.message || 'Failed to book session');
     }
   };
 
-  // Handler: Mark Session Complete (API 5)
+  // Handler: Complete a Session (API 5)
   const handleCompleteSession = async (sessionId: string) => {
     try {
       await api.completeSession(sessionId);
       showNotification('success', 'Session marked as COMPLETED successfully!');
+      if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
+        fetchTeacherSessions(currentUser.teacherId);
+      } else if (currentUser?.role === 'ADMIN') {
+        fetchAdminData();
+      }
       if (activeUserId) {
         fetchUserSessions(activeUserId);
       }
-      if (currentUser?.role === 'TEACHER' && currentUser.teacherId) {
-        fetchTeacherSessions(currentUser.teacherId);
-      }
-      if (currentUser?.role === 'ADMIN') {
-        fetchAdminData();
-      }
+      fetchAvailableSessions(selectedDate, page, rowsPerPage, searchQuery);
     } catch (err: any) {
-      showNotification('error', err.message);
+      showNotification('error', err.message || 'Failed to complete session');
     }
   };
 
@@ -358,8 +379,77 @@ export default function Home() {
     };
   };
 
+  // -------------------------------------------------------------
+  // AUTHENTICATION GATE:
+  // If hydrating, display a clean splash screen.
+  // If not logged in, display the dedicated full-screen Login/Register Screen!
+  // -------------------------------------------------------------
+  if (isHydrating) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: '#f8fafc',
+            gap: 2,
+          }}
+        >
+          <Box
+            sx={{
+              width: 52,
+              height: 52,
+              borderRadius: 3,
+              bgcolor: 'primary.main',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 16px rgba(15, 23, 42, 0.15)',
+            }}
+          >
+            <SchoolIcon sx={{ fontSize: 28 }} />
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>
+            Mentora Platform
+          </Typography>
+          <CircularProgress size={24} sx={{ color: 'primary.main' }} />
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+  // Not authenticated: Show ONLY the dedicated login & registration page
+  if (!currentUser) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <MuiAuthScreen onAuthSuccess={handleAuthSuccess} />
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert
+            severity={snackbar.type}
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+            sx={{ width: '100%', boxShadow: 3 }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </ThemeProvider>
+    );
+  }
+
   const dashboardTabInfo = getDashboardTabInfo();
 
+  // Authenticated User: Render Full Application
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -383,6 +473,102 @@ export default function Home() {
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onLogout={handleLogout}
         />
+
+        {/* Prominent Active Role Banner */}
+        <Box
+          sx={{
+            bgcolor:
+              currentUser.role === 'ADMIN'
+                ? '#fffbeb'
+                : currentUser.role === 'TEACHER'
+                ? '#faf5ff'
+                : '#eff6ff',
+            borderBottom: '1px solid',
+            borderColor:
+              currentUser.role === 'ADMIN'
+                ? '#fde68a'
+                : currentUser.role === 'TEACHER'
+                ? '#e9d5ff'
+                : '#bfdbfe',
+            py: 1.5,
+            px: { xs: 2, sm: 3 },
+          }}
+        >
+          <Container maxWidth="lg">
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                justifyContent: 'space-between',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 1.5,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                <Chip
+                  icon={
+                    currentUser.role === 'ADMIN' ? (
+                      <AdminIcon fontSize="small" />
+                    ) : currentUser.role === 'TEACHER' ? (
+                      <TeacherIcon fontSize="small" />
+                    ) : (
+                      <SchoolIcon fontSize="small" />
+                    )
+                  }
+                  label={`ACTIVE ROLE: ${currentUser.role}`}
+                  color={
+                    currentUser.role === 'ADMIN'
+                      ? 'warning'
+                      : currentUser.role === 'TEACHER'
+                      ? 'secondary'
+                      : 'primary'
+                  }
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    letterSpacing: '0.04em',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  }}
+                />
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                    {currentUser.fullName} <Typography component="span" variant="caption" sx={{ color: 'text.secondary' }}>({currentUser.email})</Typography>
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#475569', display: 'block', fontWeight: 500 }}>
+                    {currentUser.role === 'STUDENT' &&
+                      '🎓 Student Privileges: Browse available slots (API 3), book sessions (API 4), and track upcoming & completed schedule (API 6).'}
+                    {currentUser.role === 'TEACHER' &&
+                      '👨‍🏫 Teacher Privileges: Schedule availability slots (API 2), manage student bookings, and mark sessions COMPLETED (API 5).'}
+                    {currentUser.role === 'ADMIN' &&
+                      '🛡️ Administrator Privileges: Full platform control, schedule slots, override bookings, complete sessions, and inspect aggregation pipelines.'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<SwitchIcon fontSize="small" />}
+                  onClick={() => setIsAuthModalOpen(true)}
+                  sx={{ textTransform: 'none', fontSize: '0.75rem', fontWeight: 600, py: 0.3 }}
+                >
+                  Switch Role
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  startIcon={<LogoutIcon fontSize="small" />}
+                  onClick={handleLogout}
+                  sx={{ textTransform: 'none', fontSize: '0.75rem', fontWeight: 700, py: 0.3 }}
+                >
+                  Sign Out
+                </Button>
+              </Box>
+            </Box>
+          </Container>
+        </Box>
 
         {/* Tab Navigation */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
@@ -422,28 +608,28 @@ export default function Home() {
               sessions={availableSessions}
               totalSessions={totalSessions}
               selectedDate={selectedDate}
-              onDateChange={(date) => {
-                setSelectedDate(date);
+              onDateChange={(newDate) => {
+                setSelectedDate(newDate);
                 setPage(0);
               }}
               page={page}
               rowsPerPage={rowsPerPage}
               onPageChange={(newPage) => setPage(newPage)}
-              onRowsPerPageChange={(newLimit) => {
-                setRowsPerPage(newLimit);
+              onRowsPerPageChange={(newRows) => {
+                setRowsPerPage(newRows);
                 setPage(0);
               }}
               searchQuery={searchQuery}
-              onSearchChange={(query) => {
-                setSearchQuery(query);
+              onSearchChange={(q) => {
+                setSearchQuery(q);
                 setPage(0);
               }}
-              activeUser={users.find((u) => u._id === activeUserId) || null}
+              activeUser={users.find((u) => u._id === activeUserId) || currentUser}
               currentUser={currentUser}
               onOpenAuthModal={() => setIsAuthModalOpen(true)}
               onBookSession={handleBookSession}
-              isLoading={isSessionsLoading}
               onRefresh={() => fetchAvailableSessions(selectedDate, page, rowsPerPage, searchQuery)}
+              isLoading={isSessionsLoading}
             />
           )}
 
@@ -479,7 +665,7 @@ export default function Home() {
                   isLoading={isAdminDataLoading}
                 />
               ) : (
-                /* STUDENT / GUEST DASHBOARD */
+                /* STUDENT DASHBOARD */
                 <MuiStudentDashboard
                   userSessions={userSessions}
                   currentUser={currentUser}

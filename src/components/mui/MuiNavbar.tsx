@@ -122,47 +122,55 @@ export function MuiNavbar({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           {/* User Status / Active Profile */}
           {currentUser ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, p: 0.5, pr: 1.5, borderRadius: 2, bgcolor: '#f4f4f5' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.6, pr: 1.2, pl: 1, borderRadius: 2, bgcolor: '#f1f5f9', border: '1px solid #e2e8f0' }}>
               <Avatar
                 sx={{
-                  width: 28,
-                  height: 28,
-                  fontSize: '0.75rem',
+                  width: 30,
+                  height: 30,
+                  fontSize: '0.8rem',
                   fontWeight: 700,
                   bgcolor: currentUser.role === 'ADMIN' ? 'warning.main' : currentUser.role === 'TEACHER' ? 'secondary.main' : 'primary.main',
                 }}
               >
                 {currentUser.fullName.charAt(0)}
               </Avatar>
-              <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-                <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', lineHeight: 1 }}>
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', lineHeight: 1.1, color: '#0f172a' }}>
                   {currentUser.fullName}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
                   {currentUser.email}
                 </Typography>
               </Box>
+
+              {/* Prominent Role Badge */}
               <Chip
                 icon={getRoleIcon(currentUser.role)}
-                label={currentUser.role}
+                label={`ROLE: ${currentUser.role}`}
                 size="small"
                 color={getRoleColor(currentUser.role)}
-                sx={{ height: 22, fontSize: '0.68rem', fontWeight: 700 }}
+                sx={{
+                  height: 24,
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.03em',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                }}
               />
 
               {/* If Admin, allow switching active student context */}
               {currentUser.role === 'ADMIN' && users.length > 0 && (
-                <FormControl size="small" sx={{ minWidth: 140, ml: 1, display: { xs: 'none', lg: 'inline-flex' } }}>
+                <FormControl size="small" sx={{ minWidth: 140, ml: 0.5, display: { xs: 'none', lg: 'inline-flex' } }}>
                   <Select
                     value={activeUserId}
                     onChange={(e) => onUserChange(e.target.value)}
                     displayEmpty
                     sx={{
-                      height: 28,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
+                      height: 26,
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
                       bgcolor: '#ffffff',
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e4e4e7' },
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
                     }}
                   >
                     {users.map((u) => (
@@ -174,21 +182,57 @@ export function MuiNavbar({
                 </FormControl>
               )}
 
-              <Tooltip title="Sign Out">
-                <IconButton size="small" onClick={onLogout} sx={{ color: 'text.secondary', ml: 0.5 }}>
-                  <LogoutIcon fontSize="small" />
-                </IconButton>
+              {/* Switch Role Button */}
+              <Tooltip title="Switch to another user or demo profile">
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={onOpenAuthModal}
+                  sx={{
+                    fontSize: '0.72rem',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 1,
+                    py: 0.3,
+                    color: 'text.secondary',
+                    '&:hover': { color: 'primary.main', bgcolor: '#e2e8f0' },
+                  }}
+                >
+                  Switch
+                </Button>
+              </Tooltip>
+
+              {/* Logout Button */}
+              <Tooltip title="Log Out & Remove Session Token">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<LogoutIcon sx={{ fontSize: '0.85rem' }} />}
+                  onClick={onLogout}
+                  sx={{
+                    fontSize: '0.72rem',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    py: 0.2,
+                    px: 1,
+                    height: 26,
+                    borderRadius: 1.5,
+                  }}
+                >
+                  Log Out
+                </Button>
               </Tooltip>
             </Box>
           ) : (
             <Button
-              variant="outlined"
+              variant="contained"
               size="small"
               startIcon={<LoginIcon />}
               onClick={onOpenAuthModal}
-              sx={{ fontWeight: 600, borderColor: '#d4d4d8' }}
+              sx={{ fontWeight: 700 }}
             >
-              Sign In / Switch Role
+              Sign In / Register
             </Button>
           )}
 

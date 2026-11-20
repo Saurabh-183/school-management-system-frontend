@@ -101,4 +101,6 @@ export interface RegisterPayload {
   password: string;
   role?: UserRole;
   teacherId?: string;
+  specialization?: string;
+  experience?: number;
 }
